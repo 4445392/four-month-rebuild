@@ -1,5 +1,5 @@
 // Your data: download a backup, start from empty storage, restore it — and restore an old claude.ai export.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { test, expect, openApp, visit } from "./fixtures.mjs";
 
 async function seed(page) {
@@ -103,4 +103,34 @@ test("the plan downloads as a calendar at the chosen time", async ({ page }) => 
   expect(text.split("BEGIN:VEVENT").length - 1).toBe(121);
   expect(text).toContain("DTSTART:20261201T050000Z");
   expect(await page.evaluate(() => APP.state.settings.studyTime)).toBe("07:00");
+});
+
+test("backups explain themselves, and 'Download for Claude' gives a readable summary", async ({ page }, info) => {
+  await openApp(page, "#/record");
+  await seed(page);
+  // the JSON backup: guide first, the data unchanged, names for every id
+  const [backup] = await Promise.all([page.waitForEvent("download"), page.click("[data-act='exportData']")]);
+  const file = info.outputPath("backup.json");
+  await backup.saveAs(file);
+  const j = JSON.parse(readFileSync(file, "utf8"));
+  expect(Object.keys(j).slice(0, 6)).toEqual(["format", "formatVersion", "exported", "exportedSAST", "app", "about"]);
+  expect(j.format).toBe("four-month-rebuild-backup");
+  expect(j.about.join(" ")).toContain("milliseconds since 1970");
+  expect(j.catalog.lessons.o1.title).toBe("The Bet");
+  expect(j.catalog.exams.g1.title).toMatch(/^Gate 1/);
+  expect(j.catalog.weeks.c2.name).toBeTruthy();
+  expect(j.state.lessons.o1.done).toBeGreaterThan(0);
+  expect(j.trades["tr-1"].R).toBe(2);
+
+  // the Markdown summary for Claude
+  const [md] = await Promise.all([page.waitForEvent("download"), page.click("[data-act='exportClaude']")]);
+  expect(md.suggestedFilename()).toMatch(/^four-month-rebuild-for-claude-\d{4}-\d{2}-\d{2}\.md$/);
+  const mdFile = info.outputPath("for-claude.md");
+  await md.saveAs(mdFile);
+  const text = readFileSync(mdFile, "utf8");
+  for (const heading of ["# The Four-Month Rebuild — Round Trip's record", "## Standing and pace", "## Gates", "## Lessons and units", "## Explain-backs (in my own words)", "## Sunday reviews", "## Trade journal", "## Consistency", "## Earlier tutor conversations"]) expect(text).toContain(heading);
+  expect(text).toContain("| o1 | The Bet |");
+  expect(text).toContain("A trade is a bet with a known cost.");
+  expect(text).toContain("| EURUSD |");
+  expect(text).toContain("One thing wrong: late twice");
 });

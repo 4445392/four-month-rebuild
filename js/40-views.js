@@ -519,7 +519,7 @@
         (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly aria-label='Your Sunday message, ready to copy'>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>BACKUP</span><h2>Keep a copy</h2></div><p>Everything you've done lives only on this device. Download a backup each Sunday and keep it somewhere safe — Google Drive, or email it to yourself.</p>" +
-        "<p class='small muted'>" + esc(lastBackupText()) + "</p><div class='row'><button class='btn' data-act='weekBackup' data-w='" + cw + "'>Download this week's backup</button></div></section>";
+        "<p class='small muted'>" + esc(lastBackupText()) + "</p><div class='row wrap'><button class='btn' data-act='weekBackup' data-w='" + cw + "'>Download this week's backup</button><button class='btn ghost' data-act='exportClaude'>Download for Claude (.md)</button></div></section>";
       if (rday.h2 && rday.h2.type === "exam") { const ex = COURSE.exams[rday.h2.id]; h += "<section class='panel gate'><div class='sec-head'><span class='code'>HOUR 2 · GATE</span><h2>" + esc(ex.title) + "</h2></div><p>" + esc(ex.intro) + "</p><a class='btn primary' href='#/exam/" + ex.id + "'>Go to the gate</a></section>"; }
       return h + "</div>";
     }
@@ -890,7 +890,8 @@
       "<p class='small'><b>Storage:</b> " + dbLine + "</p>" + PWA.settingsHTML() +
       "<div class='field'><span id='theme-l'>Appearance</span><div class='row wrap' role='group' aria-labelledby='theme-l'>" + [["system", "Follow the device"], ["light", "Light"], ["dark", "Dark"]].map(function (o) { const on = PLATFORM.theme.get() === o[0]; return "<button class='btn sm" + (on ? " primary" : " ghost") + "' data-act='setTheme' data-v='" + o[0] + "' aria-pressed='" + on + "'>" + o[1] + "</button>"; }).join("") + "</div></div>" +
       "<div class='row wrap'><button class='btn ghost' data-act='exportData'>Download my data (JSON)</button><button class='btn ghost' data-act='restoreData'>Restore from a backup file…</button><button class='btn danger' data-act='resetAll'>Reset all progress…</button></div>" +
-      "<p class='small muted'>A backup downloaded from the claude.ai version restores here too.</p>" + restoreHTML() + "</section>";
+      "<p class='small muted'>A backup downloaded from the claude.ai version restores here too. Backups explain themselves: each file carries a plain-English guide to its fields and the names behind every id, so Claude can read it later.</p>" +
+      "<div class='field'><span>For Claude</span><p class='small'>Claude can't see this app's storage. To talk through your progress, download a readable summary — lessons, explain-backs, reviews, gates, measured numbers and every trade — and upload it to a Claude chat, or to a Claude Project so every chat there can use it.</p><div class='row'><button class='btn' data-act='exportClaude'>Download for Claude (.md)</button></div></div>" + restoreHTML() + "</section>";
   }
   function restoreHTML() {
     const r = APP.ui.restore; if (!r) return "";

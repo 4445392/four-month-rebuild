@@ -198,8 +198,12 @@
     },
     saveLocal: function () { writeLS(LS.state, APP.state); },
     /* ---- backups: {exported, state, trades, writing, threads} (the claude.ai export has no threads) ---- */
+    /* Self-describing for Claude and other readers (EXPORT.describe(): format, a field guide, readable
+       times, a catalog of ids → names). Restore reads only state/trades/writing/threads. */
     backupText: function () {
-      return JSON.stringify({ exported: new Date().toISOString(), app: "four-month-rebuild", state: APP.state, trades: APP.trades, writing: APP.writing, threads: APP.threads }, null, 2);
+      const d = window.EXPORT ? EXPORT.describe() : {};
+      const head = { format: d.format, formatVersion: d.formatVersion, exported: new Date().toISOString(), exportedSAST: d.exportedSAST, app: "four-month-rebuild", about: d.about };
+      return JSON.stringify(Object.assign(head, { state: APP.state, trades: APP.trades, writing: APP.writing, threads: APP.threads, catalog: d.catalog }), null, 2);
     },
     /* Parse and validate a backup file. Throws Error(message) if it can't be used; changes nothing. */
     checkBackup: function (text) {

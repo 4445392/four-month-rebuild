@@ -43,6 +43,7 @@ There is no build step: classic scripts, no framework, no bundler.
 | 60-labs.js | — | labs: size, expectancy, recovery, streaks, Monte Carlo, drills |
 | 65-journal.js | `JOURNAL` | trade log, stats, segments, style diagnostic, gate evidence |
 | 70-tutor.js | `TUTOR` | the free tutor: drawer and page that build a briefing + question to paste into the Claude app; prompts for marking an explain-back, three more drills, feedback on written gate answers; "Copy for Claude" |
+| 78-export.js | `EXPORT` | data Claude can read later: `describe()` (field guide, readable SAST times, catalog of ids → names) added to every JSON backup; `markdown()` = "Download for Claude" readable summary |
 | 75-calendar.js | `CALENDAR` | the plan as an .ics file (one 2-hour block per day at `settings.studyTime`, SAST; rest days all-day); panel on the Plan page |
 | 98-pwa.js | `PWA` | service-worker registration, "Update ready" toast (never reloads mid-exam), install button / iPhone instructions in Settings |
 | 99-boot.js | — | navigation chrome, `APP.cap.*` from `PLATFORM`, first render |
@@ -83,6 +84,11 @@ Outside `js/`: `sw.js` (precache + cache-first), `manifest.webmanifest`, `icons/
 - **threads:** tutor conversations (at most 60).
 
 Keep these shapes backward-compatible: the student will import his export from the claude.ai version (Record → "Download my data", shape `{exported, state, trades, writing}`).
+
+**Data Claude can read later.** Claude can't see the device's storage; it reads files he uploads (to a chat or a Claude Project). So:
+- Every JSON backup is self-describing (`format: "four-month-rebuild-backup"`, `formatVersion: 2`): `about` (a plain-English guide to every field — epoch-ms times, R, verdicts, id schemes), then the unchanged `state`, `trades`, `writing`, `threads`, then `catalog` (lessons, units with their measured-number labels, gates, tasks, calendar weeks, modules). Restore reads only the data keys.
+- Record → Settings and each Sunday review have **Download for Claude (.md)**: a readable summary (standing, gates, every lesson with its verdict, measured numbers, explain-backs in his words, Sunday reviews, written gate answers, tasks, every trade, consistency, old tutor conversations).
+- **When you add or change a stored field, update `EXPORT` too** (`ABOUT`, `catalog()`, `markdown()`) so the files keep explaining themselves. `tests/e2e/data.spec.mjs` checks both files.
 
 ## Platform layer (Phase 1 — done)
 Nothing calls `window.claude` any more. `99-boot.js` fills the old `APP.cap.*` names from `js/platform.js`, so the rest of the code didn't change:
