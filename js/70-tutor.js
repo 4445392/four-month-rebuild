@@ -1,5 +1,6 @@
 /* ============================================================
-   TUTOR — office hours with Claude via APP.cap.sample (PLATFORM.ai).
+   TUTOR — office hours with Claude via APP.cap.sample (PLATFORM.ai,
+   js/ai-anthropic.js on the student's own API key).
    Modes: Explain (patient lecturer), Socratic, Examiner, Coach.
    Also marks explain-backs (RIGHT / PARTIAL / BROKE) and written
    exam answers against their rubrics, and writes extra drills.
@@ -15,11 +16,19 @@
   };
   const T = window.TUTOR = { cur: null, ctl: null, busy: false };
   T.available = function () { return !!APP.cap.sample && !APP.cap.sampleBlocked; };
-  T.noKeyText = "The tutor needs your own Anthropic API key, which you'll be able to add in Settings in a coming update. Until then, explain-backs and written answers are self-marked.";
+  T.noKeyText = "The tutor runs on your own Anthropic API key. Until you add one in Record → Settings, explain-backs and written answers are self-marked.";
+  T.keyButton = function (cls) { return "<a class='btn " + (cls || "ghost") + "' href='#/record/tutor'>Add your key in Settings</a>"; };
   T.errorText = function (e) {
     const c = e && e.code;
     if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].indexOf(c) >= 0) { APP.cap.sampleBlocked = true; setTimeout(function () { window.renderChrome(); }, 0); return "The tutor isn't available here (permission wasn't given)."; }
     if (c === "rate_limited") return "The tutor is busy or you've hit a usage limit — try again in a minute.";
+    if (c === "bad_key") return "Your API key was rejected — check it in Record → Settings → Tutor.";
+    if (c === "billing") return "Your Anthropic account needs credit — check Billing in the Anthropic Console.";
+    if (c === "forbidden") return "Your API key isn't allowed to do that — check its workspace in the Anthropic Console.";
+    if (c === "model_unavailable") return "Your key can't use that model — pick another in Record → Settings → Tutor.";
+    if (c === "overloaded") return "Anthropic's servers are busy right now — try again in a minute.";
+    if (c === "offline") return "No connection — the tutor needs the internet. Everything else works offline.";
+    if (c === "bad_request") return "The tutor couldn't handle that request — try rephrasing, or start a new conversation.";
     if (c === "refused") return "The tutor declined that one — try rephrasing.";
     if (c === "session_expired") return "Sign in again to use the tutor.";
     if (c === "prompt_too_large") return "That was too long for the tutor — try something shorter.";
@@ -177,7 +186,7 @@
     U.$("#t-modes").innerHTML = Object.keys(MODES).map(function (k) { return "<button class='modeb" + (th.mode === k ? " on" : "") + "' data-act='tutorMode' data-m='" + k + "'>" + MODES[k][0] + "</button>"; }).join("");
     U.$("#t-ctx").textContent = "About: " + th.title;
     const box = U.$("#t-msgs");
-    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p></div>"; }
+    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p>" + (APP.cap.sampleBlocked ? "" : "<p>" + T.keyButton("sm") + "</p>") + "</div>"; }
     else if (!th.msgs.length) box.innerHTML = "<div class='msg a hint'><p><b>" + esc(MODES[th.mode][0]) + " mode.</b> " + esc(MODES[th.mode][1]) + "</p><p class='small'>Ask anything about the course, markets, risk or your own journal. The tutor won't give trade signals.</p></div>";
     else box.innerHTML = th.msgs.map(function (m) { return "<div class='msg " + (m.r === "u" ? "u" : "a") + "'>" + (m.r === "u" ? "<p>" + esc(m.t).replace(/\n/g, "<br>") + "</p>" : U.md(m.t)) + "</div>"; }).join("");
     box.scrollTop = box.scrollHeight;
@@ -193,11 +202,11 @@
     const box = U.$("#t-msgs");
     drawDrawer();
     const bubble = document.createElement("div"); bubble.className = "msg a"; bubble.innerHTML = "<p class='thinking'>Thinking…</p>"; box.appendChild(bubble); box.scrollTop = box.scrollHeight;
-    const turns = [{ role: "user", content: rules(th.mode, th.ctx) }];
+    const turns = [];
     th.msgs.slice(-16).forEach(function (m) { turns.push({ role: m.r === "u" ? "user" : "assistant", content: String(m.t).slice(0, 6000) }); });
     T.busy = true; T.ctl = new AbortController(); U.$("#t-send").hidden = true; U.$("#t-stop").hidden = false;
     let final = "";
-    const opts = { signal: T.ctl.signal, onText: function (u) { final = u.text; bubble.innerHTML = U.md(u.text); box.scrollTop = box.scrollHeight; } };
+    const opts = { system: rules(th.mode, th.ctx), signal: T.ctl.signal, onText: function (u) { final = u.text; bubble.innerHTML = U.md(u.text); box.scrollTop = box.scrollHeight; } };
     if (APP.cap.tools) opts.tools = tools(); else opts.cache = false;
     try {
       const res = await APP.cap.sample(turns, opts);
@@ -279,14 +288,55 @@
   VIEWS.tutor = {
     render: function () {
       let h = "<div class='page'><header class='pagehead'><div class='eyebrow'>Office hours</div><h1>The Tutor</h1><p class='lede'>Ask anything — about a lesson, a calculation, your journal, or why you keep breaking a rule. It knows the course and, when you ask, your own numbers. It won't give trade signals.</p></header>";
-      if (!T.available()) h += "<div class='banner locked'>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Explain-backs and written answers are self-marked in the meantime." : T.noKeyText) + "</div>";
+      if (!T.available()) h += "<div class='banner locked'>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Explain-backs and written answers are self-marked in the meantime." : T.noKeyText) + (APP.cap.sampleBlocked ? "" : "<div class='row'>" + T.keyButton("primary") + "</div>") + "</div>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>MODES</span><h2>Four ways to learn with it</h2></div><div class='modes-grid'>" + Object.keys(MODES).map(function (k) { return "<div class='mode-card'><h3>" + esc(MODES[k][0]) + "</h3><p class='small'>" + esc(MODES[k][1]) + "</p><button class='btn sm' data-act='tutorStart' data-m='" + k + "'" + (T.available() ? "" : " disabled") + ">Start in " + esc(MODES[k][0]) + " mode</button></div>"; }).join("") + "</div></section>";
       const ths = Object.keys(APP.threads).map(function (k) { return APP.threads[k]; }).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
       h += "<section class='panel'><div class='sec-head'><span class='code'>HISTORY</span><h2>Past conversations</h2></div>";
       if (!ths.length) h += "<p class='muted'>None yet.</p>";
       else h += "<div class='threads'>" + ths.slice(0, 40).map(function (t) { return "<div class='thread'><button class='linkish' data-act='tutorThread' data-id='" + esc(t.id) + "'><b>" + esc(t.title || "Conversation") + "</b><span class='small muted'>" + esc(MODES[t.mode] ? MODES[t.mode][0] : "") + " · " + (t.msgs ? t.msgs.length : 0) + " messages · " + esc(new Date(t.updatedAt || t.at || Date.now()).toLocaleDateString("en-ZA")) + "</span></button><button class='btn xs ghost' data-act='tutorDelThread' data-id='" + esc(t.id) + "'>Delete</button></div>"; }).join("") + "</div>";
-      return h + "</section><p class='small muted'>Conversations are saved on this device with your progress.</p></div>";
+      return h + "</section><p class='small muted'>Conversations are saved on this device with your progress." + (T.available() ? " The tutor uses " + esc(AI_ANTHROPIC.MODELS.filter(function (m) { return m.id === AI_ANTHROPIC.model(); })[0].name) + " on your API key." : "") + "</p></div>";
     }
   };
   ACT.tutorStart = function (el) { T.open({ fresh: true, ctx: "coach", mode: el.dataset.m }); };
+
+  /* ---------- Record → Settings → Tutor (API key, model, usage) ---------- */
+  const AI = window.AI_ANTHROPIC;
+  /* Switch the tutor on or off to match the saved key. */
+  T.applyKey = function () {
+    PLATFORM.ai = AI.fromSettings();
+    APP.cap.sample = PLATFORM.ai; APP.cap.tools = !!PLATFORM.ai; APP.cap.sampleBlocked = false;
+    window.renderChrome(); window.softRender();
+  };
+  const fmtN = function (n) { return n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : String(n); };
+  T.settingsHTML = function () {
+    const has = AI.hasKey(), cur = AI.model(), use = AI.monthUsage();
+    let h = "<section class='panel' id='tutor-settings'><div class='sec-head'><span class='code'>TUTOR</span><h2>The tutor's API key</h2></div>" +
+      "<p>The tutor runs on your own Anthropic API key. <b>It's billed to your Anthropic API account, separately from any Claude subscription</b> — set a monthly spend limit in the Anthropic Console before you start.</p><div class='form'>";
+    if (has) h += "<div class='field'><span>API key</span><p class='small'>Saved on this device: <code>" + esc(AI.masked()) + "</code></p><div class='row wrap'><button class='btn' data-act='aiTest'>Test key</button><button class='btn ghost' data-act='aiRemove'>Remove key…</button></div></div>";
+    else h += "<label class='field'><span>API key (starts with sk-ant-)</span><input id='ai-key' type='password' autocomplete='off' spellcheck='false' placeholder='sk-ant-…'></label><div class='row'><button class='btn primary' data-act='aiSave'>Save and test</button></div>";
+    h += "<label class='field'><span>Model</span><select id='ai-model' data-chg='aiModel'>" + AI.MODELS.map(function (m) { return "<option value='" + m.id + "'" + (m.id === cur ? " selected" : "") + ">" + esc(m.name + " — " + m.note + " ($" + m.price[0] + " in / $" + m.price[1] + " out per million tokens)") + "</option>"; }).join("") + "</select></label></div>";
+    h += "<p class='small'><b>This month:</b> ";
+    if (!use.rows.length) h += "no tutor use yet.</p>";
+    else h += "about $" + use.cost.toFixed(2) + " (an estimate from the API's token counts — the Anthropic Console has the exact bill).</p><div class='tablewrap'><table class='tbl'><thead><tr><th>Model</th><th>Requests</th><th>Input</th><th>Cached</th><th>Output</th><th>About</th></tr></thead><tbody>" +
+      use.rows.map(function (r) { return "<tr><td>" + esc(r.name) + "</td><td class='num'>" + r.req + "</td><td class='num'>" + fmtN(r.in + r.cw) + "</td><td class='num'>" + fmtN(r.cr) + "</td><td class='num'>" + fmtN(r.out) + "</td><td class='num'>$" + r.cost.toFixed(2) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    return h + "<p class='small muted'>Your key is stored only in this browser on this device. It is never put in backups and is only ever sent to api.anthropic.com. If the tutor declines a request, it is re-run once on Anthropic's recommended fallback model.</p></section>";
+  };
+  ACT.aiSave = async function () {
+    const inp = U.$("#ai-key"), key = (inp && inp.value || "").trim();
+    if (!key) { U.toast("Paste your API key first.", "bad"); return; }
+    U.toast("Checking your key…");
+    const r = await AI.test(key, AI.model());
+    if (!r.ok && r.error.code !== "offline") { U.toast(T.errorText(r.error), "bad"); return; }
+    await AI.setKey(key); T.applyKey();
+    U.toast(r.ok ? "Key works — the tutor is on." : "Saved, but it couldn't be checked offline. Test it when you're back online.");
+  };
+  ACT.aiTest = async function () {
+    const r = await AI.test(AI.settings().key, AI.model());
+    U.toast(r.ok ? "Your key works with " + AI.MODELS.filter(function (m) { return m.id === AI.model(); })[0].name + "." : T.errorText(r.error), r.ok ? "" : "bad");
+  };
+  ACT.aiRemove = async function () {
+    if (!window.confirmTwice("ai-remove")) return;
+    await AI.setKey(null); T.applyKey(); U.toast("Key removed. Self-marking is back on.");
+  };
+  ACT.aiModel = function (el) { AI.setModel(el.value); T.applyKey(); U.toast("The tutor now uses " + el.options[el.selectedIndex].text.split(" — ")[0] + "."); };
 })();

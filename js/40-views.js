@@ -290,7 +290,7 @@
       let h = "<div class='prompt'><div class='label'>Explain it back</div><p>" + U.inline(l.ex.p) + "</p><p class='muted small'>Write it for a friend who has never traded. Plain words first; use numbers where they help. " + (TUTOR.available() ? "The tutor marks it RIGHT, PARTIAL or BROKE and shows the first place your reasoning slipped." : "Then compare it with the model answer and mark it yourself: RIGHT, PARTIAL or BROKE. " + esc(TUTOR.noKeyText)) + "</p></div>";
       h += "<textarea id='xb-" + l.id + "' class='essay' rows='7' data-inp='draftX' data-id='" + l.id + "' placeholder='In my own words…'>" + esc(draft) + "</textarea>";
       h += "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn primary' data-act='checkExplain' data-id='" + l.id + "'>Check my explanation</button>" : "") +
-        "<button class='btn " + (TUTOR.available() ? "ghost" : "primary") + "' data-act='selfMark' data-id='" + l.id + "'>" + (TUTOR.available() ? "Self-mark instead" : "Show the model answer and self-mark") + "</button></div>";
+        "<button class='btn " + (TUTOR.available() ? "ghost" : "primary") + "' data-act='selfMark' data-id='" + l.id + "'>" + (TUTOR.available() ? "Self-mark instead" : "Show the model answer and self-mark") + "</button>" + (TUTOR.available() ? "" : TUTOR.keyButton()) + "</div>";
       h += "<div id='xfb-" + l.id + "'>" + (st.x ? feedbackHTML(st.x, wr, l) : "") + "</div>";
       if (APP.ui["selfmark-" + l.id]) h += selfMarkHTML(l);
       if (st.x) h += "<div class='row'><button class='btn primary' data-act='lessonStep' data-id='" + l.id + "' data-step='d'>On to the Drill →</button></div>";
@@ -539,7 +539,7 @@
         field("rv-right", "One thing I did right this week", rv.right, cw) + field("rv-wrong", "One thing I did wrong (mandatory — 'nothing' means you weren't looking)", rv.wrong, cw) +
         field("rv-q", "The question I want answered", rv.q, cw) +
         "<label class='field'><span>How consistent was I this week? (1 = barely showed up, 5 = both hours, every day, on time)</span><input id='rv-cons' type='number' min='1' max='5' value='" + esc(rv.cons || "") + "' data-chg='rvField' data-w='" + cw + "' data-k='cons'></label></div>" +
-        "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" : "") +
+        "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" : TUTOR.keyButton()) +
         "<button class='btn primary' data-act='submitReview' data-w='" + cw + "'>" + (rv.done ? "Update my review" : "Submit my review") + "</button></div>" +
         (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
@@ -875,9 +875,10 @@
       h += "</tbody></table></div></section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>ALMANAC</span><h2>What you have measured</h2></div>" + almanacHTML() + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>CONSISTENCY</span><h2>" + cnt.done + " of " + cnt.total + " hours · streak " + P.streak() + "</h2></div>" + gridHTML() + "</section>";
-      h += settingsHTML();
+      h += settingsHTML() + TUTOR.settingsHTML();
       return h + "</div>";
-    }
+    },
+    after: function (p) { if (p.id === "tutor") { const el = U.$("#tutor-settings"); if (el) el.scrollIntoView({ block: "start" }); } }
   };
   function almanacHTML() {
     const rows = [];

@@ -39,6 +39,7 @@
     APP.view = APP.parseHash();
     APP.cap.downloads = { save: function (o) { PLATFORM.download(o.filename, o.data, o.type); return Promise.resolve(); } };
     window.render(true);
+    PLATFORM.ai = window.AI_ANTHROPIC ? AI_ANTHROPIC.fromSettings() : null; // the tutor, if a key is saved
     const ai = PLATFORM.ai;
     if (ai) {
       APP.cap.sample = ai;
