@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Four-Month Rebuild</title>
+  <meta name="description" content="A four-month, two-hours-a-day trading course: SEED lessons, gates, a Turtle-rules Trading Floor, labs, a journal and a tutor.">
+  <meta name="theme-color" content="#152029">
+  <link rel="icon" href="data:,"><!-- placeholder until Phase 2 adds real icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+  <!-- Scripts are classic (non-module) scripts that share globals. ORDER MATTERS — see CLAUDE.md. -->
+  <script defer src="js/20-course-meta.js"></script>
+  <script defer src="js/21-course-w01-08.js"></script>
+  <script defer src="js/22-course-w09-15.js"></script>
+  <script defer src="js/23-course-w16-26.js"></script>
+  <script defer src="js/24-exams.js"></script>
+  <script defer src="js/25-plan.js"></script>
+  <script defer src="js/50-engine.js"></script>
+  <script defer src="js/10-core.js"></script>
+  <script defer src="js/30-diagrams.js"></script>
+  <script defer src="js/54-svgcharts.js"></script>
+  <script defer src="js/55-chart.js"></script>
+  <script defer src="js/40-views.js"></script>
+  <script defer src="js/56-floor.js"></script>
+  <script defer src="js/60-labs.js"></script>
+  <script defer src="js/65-journal.js"></script>
+  <script defer src="js/70-tutor.js"></script>
+  <script defer src="js/99-boot.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" aria-label="Programme navigation">
+    <a class="brand" href="#/today"><span class="mark">FMR</span><span><b>The Four-Month Rebuild</b><small>1 Dec → 28 Mar · two hours a day</small></span></a>
+    <nav id="rail-nav"></nav>
+    <div id="rail-standing" class="standing"></div>
+  </aside>
+  <div class="mainwrap">
+    <header class="topbar"><a class="brand" href="#/today"><b>The Four-Month Rebuild</b></a><span id="topstanding"></span><a class="toprec" href="#/tutor">Tutor</a></header>
+    <main id="main" tabindex="-1"><div class="page"><p class="muted">Loading your programme…</p></div></main>
+  </div>
+  <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+  <button class="fab" id="fab" data-act="tutorOpen" hidden>Ask the tutor</button>
+  <aside class="drawer" id="drawer" hidden aria-label="The Tutor">
+    <header class="dh"><div><div class="eyebrow">Office hours</div><h2>The Tutor</h2></div><button class="btn ghost sm" data-act="tutorClose">Close</button></header>
+    <div class="modes" id="t-modes"></div>
+    <div class="ctxchip" id="t-ctx"></div>
+    <div class="msgs" id="t-msgs" aria-live="polite"></div>
+    <div class="composer"><textarea id="t-in" rows="2" placeholder="Ask anything… (Enter sends, Shift+Enter for a new line)"></textarea><button class="btn primary" id="t-send" data-act="tutorSend">Send</button><button class="btn" id="t-stop" data-act="tutorStop" hidden>Stop</button></div>
+    <div class="dnote">Runs on your Claude usage · never gives trade signals</div>
+  </aside>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+</body>
+</html>
