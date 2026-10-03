@@ -29,7 +29,7 @@ test("download → clear site data → restore brings everything back", async ({
   expect(download.suggestedFilename()).toMatch(/^four-month-rebuild-\d{4}-\d{2}-\d{2}\.json$/);
   const file = info.outputPath("backup.json");
   await download.saveAs(file);
-  await expect(page.locator("#tutor-settings").locator("..")).toContainText(/Last backup: .*today/);
+  await expect(page.locator("main")).toContainText(/Last backup: .*today/);
 
   // a fresh context is a browser with no site data
   const fresh = await browser.newContext({ serviceWorkers: "block" });

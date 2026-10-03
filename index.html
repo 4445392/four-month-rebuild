@@ -18,7 +18,6 @@
   <link rel="stylesheet" href="css/app.css">
   <!-- Scripts are classic (non-module) scripts that share globals. ORDER MATTERS — see CLAUDE.md. -->
   <script defer src="js/platform.js"></script>
-  <script defer src="js/ai-anthropic.js"></script>
   <script defer src="js/20-course-meta.js"></script>
   <script defer src="js/21-course-w01-08.js"></script>
   <script defer src="js/22-course-w09-15.js"></script>
@@ -54,12 +53,12 @@
   <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
   <button class="fab" id="fab" data-act="tutorOpen" hidden>Ask the tutor</button>
   <aside class="drawer" id="drawer" hidden aria-label="The Tutor">
-    <header class="dh"><div><div class="eyebrow">Office hours</div><h2>The Tutor</h2></div><button class="btn ghost sm" data-act="tutorClose">Close</button></header>
+    <header class="dh"><div><div class="eyebrow">Free, in the Claude app</div><h2>The Tutor</h2></div><button class="btn ghost sm" data-act="tutorClose">Close</button></header>
     <div class="modes" id="t-modes"></div>
     <div class="ctxchip" id="t-ctx"></div>
     <div class="msgs" id="t-msgs" aria-live="polite"></div>
-    <div class="composer"><textarea id="t-in" rows="2" aria-label="Your question for the tutor" placeholder="Ask anything… (Enter sends, Shift+Enter for a new line)"></textarea><button class="btn primary" id="t-send" data-act="tutorSend">Send</button><button class="btn" id="t-stop" data-act="tutorStop" hidden>Stop</button></div>
-    <div class="dnote">Never gives trade signals</div>
+    <div class="composer"><textarea id="t-in" rows="3" aria-label="Your question for the tutor" placeholder="Your question (or leave it empty and ask in Claude)"></textarea><button class="btn primary" id="t-send" data-act="tutorCopy">Copy for Claude</button></div>
+    <div class="dnote"><a href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude ↗</a> — paste and send. Free with a Claude account. The briefing asks Claude never to give trade signals.</div>
   </aside>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 </div>

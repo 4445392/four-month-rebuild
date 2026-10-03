@@ -1,42 +1,33 @@
 /* ============================================================
-   TUTOR — office hours with Claude via APP.cap.sample (PLATFORM.ai,
-   js/ai-anthropic.js on the student's own API key).
+   TUTOR — free, in the Claude app. The app writes the briefing
+   (the course, where he is, how he learns, the honesty rules) and
+   copies it with his question; he pastes it into the Claude app.
+   Nothing here calls an API, so nothing here can cost money.
    Modes: Explain (patient lecturer), Socratic, Examiner, Coach.
-   Also marks explain-backs (RIGHT / PARTIAL / BROKE) and written
-   exam answers against their rubrics, and writes extra drills.
+   Also writes ready-to-paste prompts for marking an explain-back
+   (RIGHT / PARTIAL / BROKE), extra drills, and feedback on
+   written gate answers. Marks recorded in the app stay self-marks.
    ============================================================ */
 (function () {
   "use strict";
   const esc = U.esc;
+  const CLAUDE_URL = "https://claude.ai/new";
   const MODES = {
     explain: ["Explain", "Teach patiently, like a great university lecturer who never rushes: build the intuition step by step, anticipate where he'll get confused, use one strong everyday analogy and one worked example with real numbers, then ask one check-question."],
     socratic: ["Socratic", "Don't hand over the answer. Ask ONE guiding question at a time that leads him toward it. If he's stuck twice, give a hint. When he gets there, confirm it and summarise the idea in two lines."],
     examiner: ["Examiner", "Quiz him. One question at a time, mixing concept and calculation, matched to what he has studied so far. Wait for his answer, mark it (right / partly / wrong) with a one-line reason, keep a running score, then ask the next question."],
     coach: ["Coach", "Be a demanding but fair trading coach in the spirit of Richard Dennis: process before outcomes, evidence before feelings. Use his journal numbers. Call out rule-breaking plainly and constructively, and ask about consistency — his named weaknesses are discipline, consistency, and making careless decisions while watching charts."]
   };
-  const T = window.TUTOR = { cur: null, ctl: null, busy: false };
-  T.available = function () { return !!APP.cap.sample && !APP.cap.sampleBlocked; };
-  T.noKeyText = "The tutor runs on your own Anthropic API key. Until you add one in Record → Settings, explain-backs and written answers are self-marked.";
-  T.keyButton = function (cls) { return "<a class='btn " + (cls || "ghost") + "' href='#/record/tutor'>Add your key in Settings</a>"; };
-  T.errorText = function (e) {
-    const c = e && e.code;
-    if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].indexOf(c) >= 0) { APP.cap.sampleBlocked = true; setTimeout(function () { window.renderChrome(); }, 0); return "The tutor isn't available here (permission wasn't given)."; }
-    if (c === "rate_limited") return "The tutor is busy or you've hit a usage limit — try again in a minute.";
-    if (c === "bad_key") return "Your API key was rejected — check it in Record → Settings → Tutor.";
-    if (c === "billing") return "Your Anthropic account needs credit — check Billing in the Anthropic Console.";
-    if (c === "forbidden") return "Your API key isn't allowed to do that — check its workspace in the Anthropic Console.";
-    if (c === "model_unavailable") return "Your key can't use that model — pick another in Record → Settings → Tutor.";
-    if (c === "overloaded") return "Anthropic's servers are busy right now — try again in a minute.";
-    if (c === "offline") return "No connection — the tutor needs the internet. Everything else works offline.";
-    if (c === "bad_request") return "The tutor couldn't handle that request — try rephrasing, or start a new conversation.";
-    if (c === "refused") return "The tutor declined that one — try rephrasing.";
-    if (c === "session_expired") return "Sign in again to use the tutor.";
-    if (c === "prompt_too_large") return "That was too long for the tutor — try something shorter.";
-    if (c === "invalid_json") return "The tutor's answer couldn't be read — try again.";
-    if (c === "cancelled") return "Stopped.";
-    if (c === "tools_unavailable") { APP.cap.tools = false; return "Try that again."; }
-    return "Connection hiccup — try again.";
+  const T = window.TUTOR = { cur: null };
+  T.CLAUDE_URL = CLAUDE_URL;
+  /* Copy a prompt, say what to do next. */
+  T.copy = function (text, what) {
+    return U.copy(text).then(function (ok) {
+      U.toast(ok ? "Copied " + (what || "for Claude") + " — paste it into the Claude app." : "Couldn't copy here — your browser blocked the clipboard.", ok ? "" : "bad");
+      return ok;
+    });
   };
+  T.openClaudeLink = function (cls) { return "<a class='btn " + (cls || "ghost") + "' href='" + CLAUDE_URL + "' target='_blank' rel='noopener'>Open Claude ↗</a>"; };
 
   /* ---------- context ---------- */
   function lessonText(l, full) {
@@ -97,7 +88,7 @@
   function rules(mode, ctx) {
     const name = APP.state.name || "the student";
     return [
-      "You are the Tutor inside \"The Four-Month Rebuild\", a private trading programme modelled on the 1983 Turtle experiment: two hours a day from 1 December 2026 to 28 March 2027. Monday to Saturday, hour 1 is a lesson and hour 2 applies that same lesson to real price (bar replay, labs or the Trading Floor); Sunday is his weekly review, plus a gate exam when one is due. 26 units of three days each, nine modules. You are talking with " + name + ".",
+      "You are the Tutor for \"The Four-Month Rebuild\", a private trading programme modelled on the 1983 Turtle experiment: two hours a day from 1 December 2026 to 28 March 2027. Monday to Saturday, hour 1 is a lesson and hour 2 applies that same lesson to real price (bar replay, labs or the Trading Floor); Sunday is his weekly review, plus a gate exam when one is due. 26 units of three days each, nine modules. You are talking with " + name + ".",
       "",
       "How " + name + " learns — follow this closely:",
       "• Big idea first, in plain English, with an everyday analogy; then the detail; formulas last.",
@@ -125,24 +116,7 @@
     ].join("\n");
   }
 
-  /* ---------- tools the tutor may call ---------- */
-  function tools() {
-    return [
-      { name: "get_lesson", description: "Returns the full text of one course lesson by its id (e.g. 'w09b', 'o1'). Use when he asks about a lesson other than the one in context.", inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
-        execute: function (inp) { const l = P.lesson(String(inp.id || "")); if (!l) throw new Error("No lesson with that id"); return lessonText(l, true).slice(0, 6000); } },
-      { name: "search_course", description: "Finds lessons whose title or content mention the query. Returns up to 8 {id, title, week, module}.", inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
-        execute: function (inp) {
-          const q = String(inp.query || "").toLowerCase().split(/\s+/).filter(Boolean); const out = [];
-          const all = COURSE.ORIENTATION.slice(); COURSE.weeks.forEach(function (w) { w.L.forEach(function (l) { all.push(l); }); });
-          all.forEach(function (l) { const hay = (l.t + " " + l.big + " " + l.body.join(" ")).toLowerCase(); const sc = q.filter(function (w) { return hay.indexOf(w) >= 0; }).length; if (sc) out.push({ id: l.id, title: l.t, week: l.week, module: (P.module(l.mod) || {}).code, score: sc }); });
-          return out.sort(function (a, b) { return b.score - a.score; }).slice(0, 8);
-        } },
-      { name: "get_my_journal", description: "Returns a summary of his trading journal: overall statistics, segments by session/timeframe/setup/watched, and his most recent trades.", execute: function () { return window.JOURNAL ? JOURNAL.summaryForTutor() : "No journal."; } },
-      { name: "get_my_progress", description: "Returns his standing, sessions completed, gate results and the numbers he has measured in practicals.", execute: function () { return progressText(); } }
-    ];
-  }
-
-  /* ---------- drawer ---------- */
+  /* ---------- the drawer: write a prompt, copy it, paste it into Claude ---------- */
   const PRESETS = {
     orient: function () { const nx = P.next(); return "I'm about to start today's session: " + (nx ? P.itemLabel(nx) : "the programme") + ". In three or four sentences: what's the one idea I must walk away with, and what usually trips people up?"; },
     another: function () { return "Explain this lesson's big idea another way — a different everyday picture — then check I've got it."; },
@@ -167,139 +141,100 @@
     if (v === "floor" || v === "journal") return v;
     return "today";
   }
+  /* The whole prompt: a briefing for Claude, then his question. */
+  T.prompt = function (mode, ctx, question) {
+    return "Please be my tutor for this conversation. My course app wrote this briefing for you:\n\n" + rules(mode, ctx) +
+      "\n\n---\n\nMy first question: " + String(question || "").trim();
+  };
   T.open = function (o) {
     o = o || {};
     const ctx = o.ctx || currentCtx();
     const mode = o.mode || (o.preset === "quiz" ? "examiner" : o.preset === "prereview" ? "coach" : APP.state.settings.tutorMode || "explain");
-    if (o.thread) T.cur = U.clone(APP.threads[o.thread]);
-    else if (!T.cur || T.cur.ctx !== ctx || o.fresh) T.cur = { id: U.uid("th"), ctx: ctx, mode: mode, title: ctxLabel(ctx), msgs: [], at: Date.now() };
-    if (o.mode || o.preset) T.cur.mode = mode;
+    if (o.thread && APP.threads[o.thread]) T.cur = U.clone(APP.threads[o.thread]);
+    else T.cur = { ctx: ctx, mode: mode, title: ctxLabel(ctx), msgs: [] };
     const d = U.$("#drawer"); d.hidden = false; document.body.classList.add("drawer-open");
     drawDrawer();
-    if (o.text && T.available()) T.send(o.text);
-    else if (o.preset && PRESETS[o.preset] && T.available()) T.send(PRESETS[o.preset]());
-    else { const i = U.$("#t-in"); if (i) i.focus(); }
+    const i = U.$("#t-in");
+    if (i) { i.value = o.text || (o.preset && PRESETS[o.preset] ? PRESETS[o.preset]() : ""); i.focus(); }
   };
-  T.close = function () { const d = U.$("#drawer"); d.hidden = true; document.body.classList.remove("drawer-open"); };
+  T.close = function () { const d = U.$("#drawer"); d.hidden = true; document.body.classList.remove("drawer-open"); const f = U.$("#fab"); if (f && !f.hidden) f.focus(); };
   function drawDrawer() {
     const th = T.cur; if (!th) return;
-    U.$("#t-modes").innerHTML = Object.keys(MODES).map(function (k) { return "<button class='modeb" + (th.mode === k ? " on" : "") + "' data-act='tutorMode' data-m='" + k + "'>" + MODES[k][0] + "</button>"; }).join("");
+    U.$("#t-modes").innerHTML = Object.keys(MODES).map(function (k) { return "<button class='modeb" + (th.mode === k ? " on" : "") + "' data-act='tutorMode' data-m='" + k + "' aria-pressed='" + (th.mode === k) + "'>" + MODES[k][0] + "</button>"; }).join("");
     U.$("#t-ctx").textContent = "About: " + th.title;
     const box = U.$("#t-msgs");
-    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p>" + (APP.cap.sampleBlocked ? "" : "<p>" + T.keyButton("sm") + "</p>") + "<p class='small'>Or ask Claude in the Claude app instead: <button class='btn xs ghost' data-act='copyForClaude'>Copy for Claude</button></p></div>"; }
-    else if (!th.msgs.length) box.innerHTML = "<div class='msg a hint'><p><b>" + esc(MODES[th.mode][0]) + " mode.</b> " + esc(MODES[th.mode][1]) + "</p><p class='small'>Ask anything about the course, markets, risk or your own journal. The tutor won't give trade signals.</p></div>";
-    else box.innerHTML = th.msgs.map(function (m) { return "<div class='msg " + (m.r === "u" ? "u" : "a") + "'>" + (m.r === "u" ? "<p>" + esc(m.t).replace(/\n/g, "<br>") + "</p>" : U.md(m.t)) + "</div>"; }).join("");
+    let h = "";
+    if (th.msgs && th.msgs.length) h += "<div class='msg a hint'><p class='small'>A saved conversation from the earlier version of the app (read only).</p></div>" +
+      th.msgs.map(function (m) { return "<div class='msg " + (m.r === "u" ? "u" : "a") + "'>" + (m.r === "u" ? "<p>" + esc(m.t).replace(/\n/g, "<br>") + "</p>" : U.md(m.t)) + "</div>"; }).join("");
+    h += "<div class='msg a hint'><p><b>" + esc(MODES[th.mode][0]) + " mode.</b> " + esc(MODES[th.mode][1]) + "</p>" +
+      "<ol class='small'><li>Type your question below (or leave it and ask in Claude).</li><li>Tap <b>Copy for Claude</b> — it copies a briefing about the course, where you are and how you learn, plus your question.</li><li>Open the Claude app, paste, send. It's free with a Claude account.</li></ol></div>";
+    box.innerHTML = h;
     box.scrollTop = box.scrollHeight;
-    const busy = T.busy;
-    U.$("#t-send").hidden = busy; U.$("#t-stop").hidden = !busy;
-    U.$("#t-in").disabled = !T.available();
   }
-  T.send = async function (text) {
-    text = String(text || "").trim(); if (!text || T.busy || !T.available()) return;
-    const th = T.cur;
-    th.msgs.push({ r: "u", t: text }); th.at = Date.now();
-    if (th.msgs.length === 1) th.title = ctxLabel(th.ctx) + " · " + text.slice(0, 48);
-    const box = U.$("#t-msgs");
-    drawDrawer();
-    const bubble = document.createElement("div"); bubble.className = "msg a"; bubble.innerHTML = "<p class='thinking'>Thinking…</p>"; box.appendChild(bubble); box.scrollTop = box.scrollHeight;
-    const turns = [];
-    th.msgs.slice(-16).forEach(function (m) { turns.push({ role: m.r === "u" ? "user" : "assistant", content: String(m.t).slice(0, 6000) }); });
-    T.busy = true; T.ctl = new AbortController(); U.$("#t-send").hidden = true; U.$("#t-stop").hidden = false;
-    let final = "";
-    const opts = { system: rules(th.mode, th.ctx), signal: T.ctl.signal, onText: function (u) { final = u.text; bubble.innerHTML = U.md(u.text); box.scrollTop = box.scrollHeight; } };
-    if (APP.cap.tools) opts.tools = tools(); else opts.cache = false;
-    try {
-      const res = await APP.cap.sample(turns, opts);
-      final = res.text;
-      if (res.truncated) final += "\n\n*(Cut short — ask for the rest.)*";
-    } catch (e) {
-      final = (e && e.text) ? e.text + "\n\n*(" + T.errorText(e) + ")*" : "*" + T.errorText(e) + "*";
-    }
-    T.busy = false; T.ctl = null;
-    th.msgs.push({ r: "a", t: final });
-    if (th.msgs.length > 40) th.msgs = th.msgs.slice(-40);
-    STORE.saveThread(U.clone(th));
-    drawDrawer();
-  };
 
   ACT.tutorOpen = function () { T.open({}); };
   ACT.tutorAsk = function (el) { T.open({ ctx: el.dataset.ctx || currentCtx(), preset: el.dataset.preset }); };
   ACT.tutorClose = function () { T.close(); };
-  ACT.tutorSend = function () { const i = U.$("#t-in"); const v = i.value; i.value = ""; T.send(v); };
-  ACT.tutorStop = function () { if (T.ctl) T.ctl.abort(); };
+  ACT.tutorCopy = function () { const th = T.cur; if (!th) return; T.copy(T.prompt(th.mode, th.ctx, (U.$("#t-in") || {}).value)); };
   ACT.tutorMode = function (el) { if (!T.cur) return; T.cur.mode = el.dataset.m; APP.state.settings.tutorMode = el.dataset.m; STORE.commit(false); drawDrawer(); };
-  ACT.tutorNew = function () { T.open({ fresh: true, ctx: "today" }); };
   ACT.tutorThread = function (el) { T.open({ thread: el.dataset.id }); };
   ACT.tutorDelThread = function (el) { if (!window.confirmTwice("th-" + el.dataset.id)) return; STORE.deleteDoc("threads", "tutor", el.dataset.id); render(false); };
-  document.addEventListener("keydown", function (e) { if (e.target && e.target.id === "t-in" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ACT.tutorSend(); } if (e.key === "Escape" && !U.$("#drawer").hidden) T.close(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.target && e.target.id === "t-in" && e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ACT.tutorCopy(); }
+    if (e.key === "Escape" && !U.$("#drawer").hidden) T.close();
+  });
 
-  /* ---------- structured calls ---------- */
-  T.gradeExplain = async function (l, text) {
-    const prompt = [
-      "You are marking a student's 'explain it back' answer in a trading course. Be fair, specific and honest; encouraging but never flattering. The student is " + (APP.state.name || "the student") + ", who learns best from plain-English explanations.",
-      "", "Lesson: " + l.t, "Big idea: " + l.big, "Prompt he answered: " + l.ex.p,
+  /* ---------- ready-made prompts (Claude replies in plain words; he records his own mark) ---------- */
+  T.explainPrompt = function (l, text) {
+    return [
+      "Please mark my 'explain it back' answer for a lesson in my trading course. Be fair, specific and honest; encouraging but never flattering. I learn best from plain-English explanations.",
+      "", "Lesson: " + l.t, "Big idea: " + l.big, "The prompt I answered: " + l.ex.p,
       "Key points a complete explanation covers:", l.ex.r.map(function (r, k) { return (k + 1) + ". " + r; }).join("\n"),
-      "Model explanation (reference only — wording need not match): " + l.ex.m,
-      "", "His explanation:", "\"\"\"", text.slice(0, 5000), "\"\"\"", "",
-      "Return ONLY a JSON object:",
-      "{\"verdict\":\"RIGHT\"|\"PARTIAL\"|\"BROKE\",\"score\":0-5,\"right\":[up to 3 short strings — what he got right, quoting or paraphrasing him],\"broke\":\"the FIRST place his reasoning went wrong or a key idea is missing, quoting his words where possible; empty string if nothing broke\",\"fix\":\"the corrected idea in 1-3 plain-English sentences; empty if RIGHT\",\"followUp\":\"one short question that tests whether he now understands the weakest point\"}",
-      "RIGHT = covers the key points with no errors. PARTIAL = mostly right but a point is missing or muddled. BROKE = a key misconception or a major gap."
+      "Model explanation (reference only — my wording doesn't need to match): " + l.ex.m,
+      "", "My explanation:", "\"\"\"", String(text).slice(0, 5000), "\"\"\"", "",
+      "Reply in exactly this shape:",
+      "Verdict: RIGHT, PARTIAL or BROKE (RIGHT = covers the key points with no errors; PARTIAL = mostly right but a point is missing or muddled; BROKE = a key misconception or a major gap)",
+      "What I got right: up to 3 short points, quoting me",
+      "Where it broke: the FIRST place my reasoning went wrong or a key idea is missing, quoting my words",
+      "The fix: the corrected idea in 1–3 plain-English sentences",
+      "Check yourself: one short question that tests my weakest point — then wait for my answer and mark it."
     ].join("\n");
-    const r = await APP.cap.sample.json(prompt, {});
-    const v = String(r && r.verdict || "").toUpperCase();
-    return { verdict: ["RIGHT", "PARTIAL", "BROKE"].indexOf(v) >= 0 ? v : "PARTIAL", score: Math.max(0, Math.min(5, Math.round(Number(r && r.score) || 0))),
-      right: Array.isArray(r && r.right) ? r.right.slice(0, 3).map(String) : [], broke: String(r && r.broke || ""), fix: String(r && r.fix || ""), followUp: String(r && r.followUp || "") };
   };
-  T.gradeWritten = async function (q, text, key) {
-    const prompt = [
-      "You are the examiner for a gate exam in a trading course. Mark this answer strictly against the rubric: one mark per rubric point, up to " + q.marks + " marks. Award a point only if the answer clearly and correctly covers it; paraphrase is fine. Do not reward length.",
-      "", "Question: " + q.q, "Rubric:", q.rubric.map(function (r, k) { return (k + 1) + ". " + r; }).join("\n"),
-      key ? "Marking key / context: " + key : "",
-      "", "Answer:", "\"\"\"", text.slice(0, 8000), "\"\"\"", "",
-      "Return ONLY a JSON object: {\"marks\": integer 0-" + q.marks + ", \"hit\": [numbers of rubric points covered], \"missed\": [short strings naming each rubric point missed], \"comment\": \"2-3 sentences: what was strong, and the single most important improvement\"}"
+  T.drillsPrompt = function (l) {
+    return [
+      "Write 3 NEW practice questions for this lesson of my trading course, at the same level, testing understanding rather than trivia. If the lesson involves numbers, include at least one calculation that gives every number needed.",
+      "", lessonText(l, true), "", "Questions I've already done (don't repeat them): " + l.q.map(function (q) { return q.q; }).join(" | "), "",
+      "Number the questions. Put all the answers, each with a one-line working, at the very end under the heading 'Answers', so I can try first."
     ].join("\n");
-    const r = await APP.cap.sample.json(prompt, { cache: false });
-    const hit = Array.isArray(r && r.hit) ? r.hit.map(Number).filter(function (n) { return n >= 1 && n <= q.rubric.length; }) : [];
-    let marks = Math.round(Number(r && r.marks));
-    if (!isFinite(marks)) marks = hit.length;
-    return { marks: Math.max(0, Math.min(q.marks, marks)), hit: hit, missed: Array.isArray(r && r.missed) ? r.missed.map(String).slice(0, 12) : [], comment: String(r && r.comment || "") };
   };
-  T.genDrills = async function (l) {
-    const prompt = [
-      "Write 3 NEW practice questions for this lesson of a trading course, at the same level, testing understanding rather than trivia. If the lesson involves numbers, include at least one calculation.",
-      "", lessonText(l, true), "", "Existing questions (don't repeat them): " + l.q.map(function (q) { return q.q; }).join(" | "), "",
-      "Return ONLY a JSON array of exactly 3 objects, each either",
-      "{\"k\":\"mcq\",\"q\":\"question\",\"o\":[\"option\",\"option\",\"option\",\"option\"],\"a\":index of the correct option,\"w\":\"one-sentence explanation\"}",
-      "or",
-      "{\"k\":\"num\",\"q\":\"question containing every number needed\",\"a\":number,\"tol\":acceptable absolute error,\"u\":\"unit\",\"w\":\"one-sentence worked answer\"}"
-    ].join("\n");
-    const arr = await APP.cap.sample.json(prompt, { cache: false });
-    if (!Array.isArray(arr)) throw { code: "invalid_json" };
-    const out = arr.filter(function (q) {
-      if (!q || !q.q) return false;
-      if (q.k === "mcq") return Array.isArray(q.o) && q.o.length >= 2 && Number(q.a) >= 0 && Number(q.a) < q.o.length;
-      return q.k === "num" && isFinite(Number(q.a));
-    }).slice(0, 3).map(function (q) { return q.k === "mcq" ? { k: "mcq", q: String(q.q), o: q.o.map(String), a: Number(q.a), w: String(q.w || "") } : { k: "num", q: String(q.q), a: Number(q.a), tol: isFinite(Number(q.tol)) ? Math.abs(Number(q.tol)) : Math.abs(Number(q.a)) * 0.01 + 1e-9, u: String(q.u || ""), w: String(q.w || "") }; });
-    if (!out.length) throw { code: "invalid_json" };
-    return out;
+  /* Written gate answers after submitting: questions, rubrics, marking keys and his answers. */
+  T.writtenPrompt = function (ex, items) {
+    return [
+      "Please give me examiner's feedback on my written answers from '" + ex.title + "' in my trading course. For each answer: which rubric points it clearly covers, which it misses, and the single most important improvement — 2–3 sentences, plain English. Mark strictly: one mark per rubric point, paraphrase is fine, length earns nothing.",
+      ""
+    ].concat(items.map(function (it, k) {
+      return ["Question " + (k + 1) + " (" + it.q.marks + " marks): " + it.q.q, "Rubric:", it.q.rubric.map(function (r, j) { return (j + 1) + ". " + r; }).join("\n"),
+        it.key ? "Marking key / context: " + it.key : "", "My answer:", "\"\"\"", (it.text || "(no answer)").slice(0, 8000), "\"\"\"", ""].join("\n");
+    })).join("\n");
   };
 
   /* ---------- the Tutor page ---------- */
   VIEWS.tutor = {
     render: function () {
-      let h = "<div class='page'><header class='pagehead'><div class='eyebrow'>Office hours</div><h1>The Tutor</h1><p class='lede'>Ask anything — about a lesson, a calculation, your journal, or why you keep breaking a rule. It knows the course and, when you ask, your own numbers. It won't give trade signals.</p></header>";
-      if (!T.available()) h += "<div class='banner locked'>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Explain-backs and written answers are self-marked in the meantime." : T.noKeyText) + (APP.cap.sampleBlocked ? "" : "<div class='row'>" + T.keyButton("primary") + "</div>") + "</div>";
-      h += "<section class='panel'><div class='sec-head'><span class='code'>MODES</span><h2>Four ways to learn with it</h2></div><div class='modes-grid'>" + Object.keys(MODES).map(function (k) { return "<div class='mode-card'><h3>" + esc(MODES[k][0]) + "</h3><p class='small'>" + esc(MODES[k][1]) + "</p><button class='btn sm' data-act='tutorStart' data-m='" + k + "'" + (T.available() ? "" : " disabled") + ">Start in " + esc(MODES[k][0]) + " mode</button></div>"; }).join("") + "</div></section>";
+      let h = "<div class='page'><header class='pagehead'><div class='eyebrow'>Office hours · free</div><h1>The Tutor</h1><p class='lede'>Your tutor is Claude, in the free Claude app. This app writes the briefing — the course, where you are, how you like to learn, and the rule that nobody gives you trade signals — so all you add is your question.</p></header>";
+      h += "<section class='panel'><div class='sec-head'><span class='code'>HOW</span><h2>Three steps</h2></div><ol><li>Pick a mode below, or tap <b>Ask the tutor</b> on any page — the briefing then includes that lesson, review or journal.</li><li>Type your question and tap <b>Copy for Claude</b>.</li><li>Open the Claude app (or claude.ai), paste, send. A free Claude account is enough.</li></ol><div class='row wrap'>" + T.openClaudeLink() + "</div></section>";
+      h += "<section class='panel'><div class='sec-head'><span class='code'>MODES</span><h2>Four ways to learn with it</h2></div><div class='modes-grid'>" + Object.keys(MODES).map(function (k) { return "<div class='mode-card'><h3>" + esc(MODES[k][0]) + "</h3><p class='small'>" + esc(MODES[k][1]) + "</p><button class='btn sm' data-act='tutorStart' data-m='" + k + "'>Write a " + esc(MODES[k][0]) + " prompt</button></div>"; }).join("") + "</div></section>";
       const ths = Object.keys(APP.threads).map(function (k) { return APP.threads[k]; }).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
-      h += "<section class='panel'><div class='sec-head'><span class='code'>HISTORY</span><h2>Past conversations</h2></div>";
-      if (!ths.length) h += "<p class='muted'>None yet.</p>";
-      else h += "<div class='threads'>" + ths.slice(0, 40).map(function (t) { return "<div class='thread'><button class='linkish' data-act='tutorThread' data-id='" + esc(t.id) + "'><b>" + esc(t.title || "Conversation") + "</b><span class='small muted'>" + esc(MODES[t.mode] ? MODES[t.mode][0] : "") + " · " + (t.msgs ? t.msgs.length : 0) + " messages · " + esc(new Date(t.updatedAt || t.at || Date.now()).toLocaleDateString("en-ZA")) + "</span></button><button class='btn xs ghost' data-act='tutorDelThread' data-id='" + esc(t.id) + "'>Delete</button></div>"; }).join("") + "</div>";
-      return h + "</section><p class='small muted'>Conversations are saved on this device with your progress." + (T.available() ? " The tutor uses " + esc(AI_ANTHROPIC.MODELS.filter(function (m) { return m.id === AI_ANTHROPIC.model(); })[0].name) + " on your API key." : "") + "</p></div>";
+      if (ths.length) {
+        h += "<section class='panel'><div class='sec-head'><span class='code'>HISTORY</span><h2>Saved conversations</h2></div><p class='small muted'>From the earlier version of the app. Your conversations in Claude are kept in the Claude app.</p>";
+        h += "<div class='threads'>" + ths.slice(0, 40).map(function (t) { return "<div class='thread'><button class='linkish' data-act='tutorThread' data-id='" + esc(t.id) + "'><b>" + esc(t.title || "Conversation") + "</b><span class='small muted'>" + esc(MODES[t.mode] ? MODES[t.mode][0] : "") + " · " + (t.msgs ? t.msgs.length : 0) + " messages · " + esc(new Date(t.updatedAt || t.at || Date.now()).toLocaleDateString("en-ZA")) + "</span></button><button class='btn xs ghost' data-act='tutorDelThread' data-id='" + esc(t.id) + "'>Delete</button></div>"; }).join("") + "</div></section>";
+      }
+      return h + "<p class='small muted'>Nothing is sent anywhere until you paste it into Claude yourself. The app never calls a paid service.</p></div>";
     }
   };
-  ACT.tutorStart = function (el) { T.open({ fresh: true, ctx: "coach", mode: el.dataset.m }); };
+  ACT.tutorStart = function (el) { T.open({ ctx: "coach", mode: el.dataset.m }); };
 
-  /* ---------- "Copy for Claude": the same context, ready to paste into the Claude app ---------- */
+  /* ---------- "Copy for Claude" on lessons: the lesson and how he learns ---------- */
   const ABOUT_ME = "How I learn best: give me the big idea first, in plain English with an everyday analogy; then the detail; formulas last. A small diagram helps. Keep answers short, and end with one question that checks I could explain it to someone else. If you show code, use Java. Never give me trade signals or predictions.";
   T.claudeText = function (ctx) {
     const head = "I'm studying \"The Four-Month Rebuild\", my own two-hours-a-day trading course (1 Dec 2026 – 28 Mar 2027), built around the 1983 Turtle experiment: risk first, rules over predictions.";
@@ -313,45 +248,4 @@
     const ctx = el.dataset.ctx || (T.cur && T.cur.ctx) || currentCtx();
     U.copy(T.claudeText(ctx)).then(function (ok) { U.toast(ok ? "Copied — paste it into the Claude app and add your question." : "Couldn't copy here — your browser blocked the clipboard.", ok ? "" : "bad"); });
   };
-
-  /* ---------- Record → Settings → Tutor (API key, model, usage) ---------- */
-  const AI = window.AI_ANTHROPIC;
-  /* Switch the tutor on or off to match the saved key. */
-  T.applyKey = function () {
-    PLATFORM.ai = AI.fromSettings();
-    APP.cap.sample = PLATFORM.ai; APP.cap.tools = !!PLATFORM.ai; APP.cap.sampleBlocked = false;
-    window.renderChrome(); window.softRender();
-  };
-  const fmtN = function (n) { return n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : String(n); };
-  T.settingsHTML = function () {
-    const has = AI.hasKey(), cur = AI.model(), use = AI.monthUsage();
-    let h = "<section class='panel' id='tutor-settings'><div class='sec-head'><span class='code'>TUTOR</span><h2>The tutor's API key</h2></div>" +
-      "<p>The tutor runs on your own Anthropic API key. <b>It's billed to your Anthropic API account, separately from any Claude subscription</b> — set a monthly spend limit in the Anthropic Console before you start.</p><div class='form'>";
-    if (has) h += "<div class='field'><span>API key</span><p class='small'>Saved on this device: <code>" + esc(AI.masked()) + "</code></p><div class='row wrap'><button class='btn' data-act='aiTest'>Test key</button><button class='btn ghost' data-act='aiRemove'>Remove key…</button></div></div>";
-    else h += "<label class='field'><span>API key (starts with sk-ant-)</span><input id='ai-key' type='password' autocomplete='off' spellcheck='false' placeholder='sk-ant-…'></label><div class='row'><button class='btn primary' data-act='aiSave'>Save and test</button></div>";
-    h += "<label class='field'><span>Model</span><select id='ai-model' data-chg='aiModel'>" + AI.MODELS.map(function (m) { return "<option value='" + m.id + "'" + (m.id === cur ? " selected" : "") + ">" + esc(m.name + " — " + m.note + " ($" + m.price[0] + " in / $" + m.price[1] + " out per million tokens)") + "</option>"; }).join("") + "</select></label></div>";
-    h += "<p class='small'><b>This month:</b> ";
-    if (!use.rows.length) h += "no tutor use yet.</p>";
-    else h += "about $" + use.cost.toFixed(2) + " (an estimate from the API's token counts — the Anthropic Console has the exact bill).</p><div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Model</th><th>Requests</th><th>Input</th><th>Cached</th><th>Output</th><th>About</th></tr></thead><tbody>" +
-      use.rows.map(function (r) { return "<tr><td>" + esc(r.name) + "</td><td class='num'>" + r.req + "</td><td class='num'>" + fmtN(r.in + r.cw) + "</td><td class='num'>" + fmtN(r.cr) + "</td><td class='num'>" + fmtN(r.out) + "</td><td class='num'>$" + r.cost.toFixed(2) + "</td></tr>"; }).join("") + "</tbody></table></div>";
-    return h + "<p class='small muted'>Your key is stored only in this browser on this device. It is never put in backups and is only ever sent to api.anthropic.com. If the tutor declines a request, it is re-run once on Anthropic's recommended fallback model.</p></section>";
-  };
-  ACT.aiSave = async function () {
-    const inp = U.$("#ai-key"), key = (inp && inp.value || "").trim();
-    if (!key) { U.toast("Paste your API key first.", "bad"); return; }
-    U.toast("Checking your key…");
-    const r = await AI.test(key, AI.model());
-    if (!r.ok && r.error.code !== "offline") { U.toast(T.errorText(r.error), "bad"); return; }
-    await AI.setKey(key); T.applyKey();
-    U.toast(r.ok ? "Key works — the tutor is on." : "Saved, but it couldn't be checked offline. Test it when you're back online.");
-  };
-  ACT.aiTest = async function () {
-    const r = await AI.test(AI.settings().key, AI.model());
-    U.toast(r.ok ? "Your key works with " + AI.MODELS.filter(function (m) { return m.id === AI.model(); })[0].name + "." : T.errorText(r.error), r.ok ? "" : "bad");
-  };
-  ACT.aiRemove = async function () {
-    if (!window.confirmTwice("ai-remove")) return;
-    await AI.setKey(null); T.applyKey(); U.toast("Key removed. Self-marking is back on.");
-  };
-  ACT.aiModel = function (el) { AI.setModel(el.value); T.applyKey(); U.toast("The tutor now uses " + el.options[el.selectedIndex].text.split(" — ")[0] + "."); };
 })();

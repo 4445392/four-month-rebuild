@@ -6,7 +6,6 @@
    - storage: JSON key/value in IndexedDB (await storage.ready() once, then get/set)
    - download(filename, text, type): save a file
    - pickFile({accept}): open a file chooser → {name, text} or null
-   - ai:   the tutor's sampler (Phase 4). null = no tutor.
    - sync: cloud sync (optional, later). null = this device only.
    ============================================================ */
 (function () {
@@ -150,5 +149,5 @@
     }
   };
 
-  window.PLATFORM = { storage: storage, download: download, pickFile: pickFile, theme: theme, ai: null, sync: null };
+  window.PLATFORM = { storage: storage, download: download, pickFile: pickFile, theme: theme, sync: null };
 })();

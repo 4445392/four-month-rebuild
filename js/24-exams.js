@@ -2,8 +2,8 @@
    GATES — five module exams at 80%, plus the final audit.
    Sections: chart (auto-generated chart reading), gen (randomised
    numeric), mcq (fixed), evidence (checked against the Journal),
-   written (tutor-marked against a rubric; self-marked if the tutor
-   is unavailable).
+   written (self-marked against a rubric; the tutor — Claude, in the
+   Claude app — gives feedback when asked).
    ============================================================ */
 
 /* ---------- Randomised numeric generators (used by Gate 2 and Labs → Math Drills) ---------- */
@@ -203,7 +203,7 @@ COURSE.exams.g5 = {
 
 COURSE.exams.final = {
   id: "final", mod: "402", week: 26, title: "Final — The Four-Month Audit", pass: 80,
-  intro: "Four written sections, marked by the tutor against your own Journal numbers (inserted automatically). This is the graduation audit — honest beats impressive.",
+  intro: "Four written sections, self-marked against the rubric, with your own Journal numbers inserted automatically. After you submit, copy your answers to the tutor (Claude) for an examiner's feedback. This is the graduation audit — honest beats impressive.",
   sections: [
     { kind: "written", q: [
       { id: "fa1", marks: 5, withStats: true,

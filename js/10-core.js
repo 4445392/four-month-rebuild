@@ -8,7 +8,7 @@
   const APP = window.APP = {
     state: null, trades: {}, writing: {}, threads: {},
     view: { name: "today", params: {} },
-    cap: { db: null, sample: null, user: null, uid: null, downloads: null, tools: false, sampleBlocked: false, dbMode: "local", dbError: "" },
+    cap: { db: null, user: null, uid: null, downloads: null, dbMode: "local", dbError: "" },
     ui: {}
   };
 

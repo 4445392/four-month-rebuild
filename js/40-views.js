@@ -115,7 +115,7 @@
     } else if (it.type === "task") {
       const t = COURSE.TASKS[it.id], ts = S().tasks[it.id] || {};
       title = t.t;
-      body = "<p>" + U.inline(t.text) + "</p>" + ((t.tools.length || t.tutor) ? "<div class='row wrap'>" + toolLinks(t.tools) + (t.tutor && TUTOR.available() ? "<button class='btn ghost' data-act='taskTutor' data-id='" + it.id + "'>Do it with the tutor</button>" : "") + "</div>" : "") +
+      body = "<p>" + U.inline(t.text) + "</p>" + ((t.tools.length || t.tutor) ? "<div class='row wrap'>" + toolLinks(t.tools) + (t.tutor ? "<button class='btn ghost' data-act='taskTutor' data-id='" + it.id + "'>Do it with the tutor</button>" : "") + "</div>" : "") +
         "<textarea id='tn-" + it.id + "' class='notes' rows='2' data-chg='taskNote' data-id='" + it.id + "' placeholder='Notes: what you did, and what you found'" + (P.isLocked(it) ? " disabled" : "") + ">" + esc(ts.note || "") + "</textarea>";
       act = st === "done" ? "<button class='btn ghost sm' data-act='taskUndo' data-id='" + it.id + "'>Mark not done</button>" : "<button class='btn primary' data-act='taskDone' data-id='" + it.id + "'" + (P.isLocked(it) ? " disabled" : "") + ">Mark done</button>";
     } else if (it.type === "admission") {
@@ -288,10 +288,10 @@
     if (step === "x") {
       const wr = APP.writing["x-" + l.id];
       const draft = APP.ui["draft-" + l.id] !== undefined ? APP.ui["draft-" + l.id] : (wr ? wr.text : "");
-      let h = "<div class='prompt'><div class='label'>Explain it back</div><p>" + U.inline(l.ex.p) + "</p><p class='muted small'>Write it for a friend who has never traded. Plain words first; use numbers where they help. " + (TUTOR.available() ? "The tutor marks it RIGHT, PARTIAL or BROKE and shows the first place your reasoning slipped." : "Then compare it with the model answer and mark it yourself: RIGHT, PARTIAL or BROKE. " + esc(TUTOR.noKeyText)) + "</p></div>";
+      let h = "<div class='prompt'><div class='label'>Explain it back</div><p>" + U.inline(l.ex.p) + "</p><p class='muted small'>Write it for a friend who has never traded. Plain words first; use numbers where they help. Then compare it with the model answer and mark it yourself: RIGHT, PARTIAL or BROKE. For a second opinion, copy it to the tutor — Claude marks it the same way, free.</p></div>";
       h += "<textarea id='xb-" + l.id + "' class='essay' rows='7' data-inp='draftX' data-id='" + l.id + "' placeholder='In my own words…'>" + esc(draft) + "</textarea>";
-      h += "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn primary' data-act='checkExplain' data-id='" + l.id + "'>Check my explanation</button>" : "") +
-        "<button class='btn " + (TUTOR.available() ? "ghost" : "primary") + "' data-act='selfMark' data-id='" + l.id + "'>" + (TUTOR.available() ? "Self-mark instead" : "Show the model answer and self-mark") + "</button>" + (TUTOR.available() ? "" : TUTOR.keyButton()) + "</div>";
+      h += "<div class='row wrap'><button class='btn primary' data-act='selfMark' data-id='" + l.id + "'>Show the model answer and self-mark</button>" +
+        "<button class='btn ghost' data-act='copyExplain' data-id='" + l.id + "'>Copy for Claude to mark</button>" + TUTOR.openClaudeLink() + "</div>";
       h += "<div id='xfb-" + l.id + "'>" + (st.x ? feedbackHTML(st.x, wr, l) : "") + "</div>";
       if (APP.ui["selfmark-" + l.id]) h += selfMarkHTML(l);
       if (st.x) h += "<div class='row'><button class='btn primary' data-act='lessonStep' data-id='" + l.id + "' data-step='d'>On to the Drill →</button></div>";
@@ -302,27 +302,25 @@
     l.q.forEach(function (q, i) { h += questionHTML(l.id, q, i, d); });
     const answered = Object.keys(d.correct || {}).length;
     h += "</div><div class='row wrap'><span class='score'>" + (answered ? "Score: " + (d.score || 0) + " / " + l.q.length : "Answer all " + l.q.length + " questions") + "</span>" +
-      (TUTOR.available() ? "<button class='btn ghost' data-act='moreDrills' data-id='" + l.id + "'>Three more from the tutor</button>" : "") + "</div>";
-    const extra = APP.ui["extra-" + l.id];
-    if (extra && extra.length) { h += "<div class='drill extra'><div class='label'>Extra practice (not scored)</div>"; extra.forEach(function (q, i) { h += questionHTML(l.id, q, "x" + i, APP.ui["extraAns-" + l.id] || { answers: {}, correct: {} }, true); }); h += "</div>"; }
+      "<button class='btn ghost' data-act='copyDrills' data-id='" + l.id + "'>Copy for Claude: three more questions</button></div>";
     if (answered === l.q.length) {
       h += st.done ? "<div class='banner good'>Lesson complete. " + (d.score < l.q.length ? "Re-read the explanations for anything you missed — tomorrow builds on it." : "Clean sweep.") + "</div>" : "<div class='row'><button class='btn primary' data-act='finishLesson' data-id='" + l.id + "'>Finish lesson</button></div>";
     }
     return h;
   }
-  function questionHTML(lid, q, i, d, extra) {
+  function questionHTML(lid, q, i, d) {
     const ans = d.answers ? d.answers[i] : undefined, ok = d.correct ? d.correct[i] : undefined;
     const answered = ok !== undefined;
     const id = "q-" + lid + "-" + i;
-    let h = "<div class='q" + (answered ? (ok ? " right" : " wrong") : "") + "'><div class='qq'><span class='qn'>" + (extra ? "+" : "Q" + (Number(i) + 1)) + "</span>" + U.inline(q.q) + "</div>";
+    let h = "<div class='q" + (answered ? (ok ? " right" : " wrong") : "") + "'><div class='qq'><span class='qn'>" + "Q" + (Number(i) + 1) + "</span>" + U.inline(q.q) + "</div>";
     if (q.k === "mcq") {
       h += "<div class='opts'>" + q.o.map(function (o, k) {
         const cls = answered ? (k === q.a ? " correct" : (k === ans ? " chosen" : "")) : "";
-        return "<button class='opt" + cls + "' data-act='answer' data-lid='" + lid + "' data-i='" + i + "' data-v='" + k + "'" + (extra ? " data-extra='1'" : "") + (answered ? " disabled" : "") + ">" + U.inline(o) + "</button>";
+        return "<button class='opt" + cls + "' data-act='answer' data-lid='" + lid + "' data-i='" + i + "' data-v='" + k + "'" + (answered ? " disabled" : "") + ">" + U.inline(o) + "</button>";
       }).join("") + "</div>";
     } else {
       h += "<div class='row'><input id='" + id + "' class='numin' type='number' step='any' inputmode='decimal' value='" + (ans !== undefined ? esc(ans) : "") + "'" + (answered ? " disabled" : "") + " aria-label='Your answer'>" + (q.u ? "<span class='unit'>" + esc(q.u) + "</span>" : "") +
-        (answered ? "" : "<button class='btn sm' data-act='answerNum' data-lid='" + lid + "' data-i='" + i + "'" + (extra ? " data-extra='1'" : "") + ">Check</button>") + "</div>";
+        (answered ? "" : "<button class='btn sm' data-act='answerNum' data-lid='" + lid + "' data-i='" + i + "'" + ">Check</button>") + "</div>";
       if (answered) h += "<div class='muted small'>Answer: " + esc(q.a) + (q.u ? " " + esc(q.u) : "") + "</div>";
     }
     if (answered) h += "<div class='why'>" + (ok ? "<b>Right.</b> " : "<b>Not quite.</b> ") + U.inline(q.w || "") + "</div>";
@@ -361,24 +359,11 @@
     else { st.e = Date.now(); STORE.commit(true); go("lesson", el.dataset.id, P.moduleUnlocked(P.lesson(el.dataset.id).mod) ? "x" : "e"); }
   };
   ACT.draftX = function (el) { APP.ui["draft-" + el.dataset.id] = el.value; el.style.height = "auto"; el.style.height = Math.max(150, el.scrollHeight + 4) + "px"; };
-  ACT.checkExplain = async function (el) {
-    const id = el.dataset.id, l = P.lesson(id);
-    const text = (U.$("#xb-" + id).value || "").trim();
+  ACT.copyExplain = function (el) {
+    const id = el.dataset.id, t = U.$("#xb-" + id), text = (t ? t.value : "").trim();
     if (text.length < 40) { U.toast("Write at least a few sentences first.", "bad"); return; }
-    const box = U.$("#xfb-" + id);
-    el.disabled = true; box.innerHTML = "<div class='thinking'>The tutor is reading your explanation…</div>";
-    try {
-      const fb = await TUTOR.gradeExplain(l, text);
-      const st = lessonState(id);
-      st.x = { verdict: fb.verdict, score: fb.score, at: Date.now() };
-      STORE.saveWriting({ id: "x-" + id, kind: "explain", ref: id, text: text, verdict: fb.verdict, score: fb.score, fb: fb, at: Date.now() });
-      delete APP.ui["draft-" + id];
-      STORE.commit(true);
-      render(false);
-    } catch (e) {
-      el.disabled = false;
-      box.innerHTML = "<div class='banner bad'>" + esc(TUTOR.errorText(e)) + " You can self-mark instead.</div>";
-    }
+    APP.ui["draft-" + id] = t.value;
+    TUTOR.copy(TUTOR.explainPrompt(P.lesson(id), text), "your explanation for marking");
   };
   ACT.selfMark = function (el) { APP.ui["selfmark-" + el.dataset.id] = true; const t = U.$("#xb-" + el.dataset.id); if (t) APP.ui["draft-" + el.dataset.id] = t.value; render(false); };
   ACT.saveSelfMark = function (el) {
@@ -402,14 +387,8 @@
     const tol = q.tol !== undefined ? q.tol : Math.abs(q.a) * 0.01 + 1e-9;
     return Math.abs(x - q.a) <= tol + 1e-9;
   };
-  const recordAnswer = function (lid, i, v, extra) {
+  const recordAnswer = function (lid, i, v) {
     const l = P.lesson(lid);
-    if (extra) {
-      const qs = APP.ui["extra-" + lid] || []; const q = qs[Number(String(i).slice(1))]; if (!q) return;
-      const ok = checkQ(q, v); if (ok === null) { U.toast("Enter a number.", "bad"); return; }
-      const d = APP.ui["extraAns-" + lid] = APP.ui["extraAns-" + lid] || { answers: {}, correct: {} };
-      d.answers[i] = v; d.correct[i] = ok; render(false); return;
-    }
     const q = l.q[i]; const ok = checkQ(q, v);
     if (ok === null) { U.toast("Enter a number.", "bad"); return; }
     const st = lessonState(lid);
@@ -420,8 +399,8 @@
     STORE.commit(false);
     render(false);
   };
-  ACT.answer = function (el) { recordAnswer(el.dataset.lid, el.dataset.extra ? el.dataset.i : Number(el.dataset.i), el.dataset.v, !!el.dataset.extra); };
-  ACT.answerNum = function (el) { const inp = U.$("#q-" + el.dataset.lid + "-" + el.dataset.i); recordAnswer(el.dataset.lid, el.dataset.extra ? el.dataset.i : Number(el.dataset.i), inp ? inp.value : "", !!el.dataset.extra); };
+  ACT.answer = function (el) { recordAnswer(el.dataset.lid, Number(el.dataset.i), el.dataset.v); };
+  ACT.answerNum = function (el) { const inp = U.$("#q-" + el.dataset.lid + "-" + el.dataset.i); recordAnswer(el.dataset.lid, Number(el.dataset.i), inp ? inp.value : ""); };
   ACT.finishLesson = function (el) {
     const st = lessonState(el.dataset.id);
     if (!st.x) { U.toast("Explain it back first — that's the E in SEED.", "bad"); go("lesson", el.dataset.id, "x"); return; }
@@ -431,12 +410,7 @@
     const nx = P.next();
     if (nx) location.hash = P.itemHref(nx).slice(1); else render(false);
   };
-  ACT.moreDrills = async function (el) {
-    const id = el.dataset.id; el.disabled = true; el.textContent = "Writing questions…";
-    try { APP.ui["extra-" + id] = await TUTOR.genDrills(P.lesson(id)); APP.ui["extraAns-" + id] = { answers: {}, correct: {} }; }
-    catch (e) { U.toast(TUTOR.errorText(e), "bad"); }
-    render(false);
-  };
+  ACT.copyDrills = function (el) { TUTOR.copy(TUTOR.drillsPrompt(P.lesson(el.dataset.id)), "a request for three more questions"); };
 
   /* ================= ADMISSION ================= */
   VIEWS.admission = {
@@ -540,7 +514,7 @@
         field("rv-right", "One thing I did right this week", rv.right, cw) + field("rv-wrong", "One thing I did wrong (mandatory — 'nothing' means you weren't looking)", rv.wrong, cw) +
         field("rv-q", "The question I want answered", rv.q, cw) +
         "<label class='field'><span>How consistent was I this week? (1 = barely showed up, 5 = both hours, every day, on time)</span><input id='rv-cons' type='number' min='1' max='5' value='" + esc(rv.cons || "") + "' data-chg='rvField' data-w='" + cw + "' data-k='cons'></label></div>" +
-        "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" : TUTOR.keyButton()) +
+        "<div class='row wrap'>" + "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" +
         "<button class='btn primary' data-act='submitReview' data-w='" + cw + "'>" + (rv.done ? "Update my review" : "Submit my review") + "</button></div>" +
         (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly aria-label='Your Sunday message, ready to copy'>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
@@ -744,7 +718,7 @@
         h += "</section>";
       }
       if (sec.kind === "written") {
-        h += "<section class='panel'><div class='sec-head'><span class='code'>PART " + (si + 1) + "</span><h2>Written" + (TUTOR.available() ? " — marked by the tutor" : " — self-marked") + "</h2></div>" + (TUTOR.available() ? "" : "<p class='small muted'>" + esc(TUTOR.noKeyText) + "</p>");
+        h += "<section class='panel'><div class='sec-head'><span class='code'>PART " + (si + 1) + "</span><h2>Written — self-marked</h2></div><p class='small muted'>Tick each rubric point your answer clearly covers. After you submit, you can copy your answers to the tutor (Claude, free) for an examiner's feedback.</p>" + (at.submitted ? "<div class='row wrap'><button class='btn' data-act='copyWritten' data-id='" + ex.id + "'>Copy my written answers for feedback</button>" + TUTOR.openClaudeLink() + "</div>" : "");
         sec.q.forEach(function (q) {
           const v = at.written[q.id] || "";
           h += "<div class='q'><div class='qq'><span class='qn'>" + q.marks + " marks</span>" + esc(q.q) + "</div>";
@@ -752,7 +726,7 @@
           if (q.withStats && window.JOURNAL) h += "<div class='muted small'>" + esc(JOURNAL.auditLine()) + "</div>";
           h += "<textarea id='wq-" + q.id + "' class='essay' rows='8' data-chg='exWritten' data-q='" + q.id + "'" + (at.submitted ? " disabled" : "") + ">" + esc(v) + "</textarea>";
           if (at.submitted && at.wres && at.wres[q.id]) { const r = at.wres[q.id]; h += "<div class='feedback " + (r.marks / q.marks >= 0.75 ? "right" : r.marks / q.marks >= 0.4 ? "partial" : "broke") + "'><div class='verdict'>" + r.marks + " / " + q.marks + "</div>" + (r.comment ? "<p>" + U.inline(r.comment) + "</p>" : "") + (r.missed && r.missed.length ? "<div class='label'>Missed</div><ul>" + r.missed.map(function (m) { return "<li>" + esc(m) + "</li>"; }).join("") + "</ul>" : "") + "</div>"; }
-          if (!TUTOR.available() && !at.submitted) h += "<div class='selfmark'><div class='label'>Self-mark: tick each point your answer covers</div>" + q.rubric.map(function (r, k) { return "<label class='check'><input type='checkbox' id='wr-" + q.id + "-" + k + "'> <span>" + esc(r) + "</span></label>"; }).join("") + "</div>";
+          if (!at.submitted) h += "<div class='selfmark'><div class='label'>Self-mark: tick each point your answer covers</div>" + q.rubric.map(function (r, k) { return "<label class='check'><input type='checkbox' id='wr-" + q.id + "-" + k + "'> <span>" + esc(r) + "</span></label>"; }).join("") + "</div>";
           h += "</div>";
         });
         h += "</section>";
@@ -819,16 +793,12 @@
     const written = [];
     const wsec = ex.sections.filter(function (s) { return s.kind === "written"; })[0];
     if (wsec) {
-      el.disabled = true; el.textContent = "The tutor is marking your written answers…";
       at.wres = {};
       for (let k = 0; k < wsec.q.length; k++) {
         const q = wsec.q[k], text = (at.written[q.id] || "").trim();
         let r;
         if (!text) r = { marks: 0, missed: q.rubric, comment: "No answer." };
-        else if (TUTOR.available()) {
-          try { r = await TUTOR.gradeWritten(q, text, examKey(ex, q, at)); }
-          catch (e) { const t = selfTicks[q.id] || []; r = { marks: Math.round(q.marks * t.filter(Boolean).length / q.rubric.length), missed: q.rubric.filter(function (x, j) { return !t[j]; }), comment: "Tutor unavailable (" + TUTOR.errorText(e) + ") — marked from your self-mark ticks." }; }
-        } else { const t = selfTicks[q.id] || []; r = { marks: Math.round(q.marks * t.filter(Boolean).length / q.rubric.length), missed: q.rubric.filter(function (x, j) { return !t[j]; }), comment: "Self-marked against the rubric." }; }
+        else { const t = selfTicks[q.id] || []; r = { marks: Math.round(q.marks * t.filter(Boolean).length / q.rubric.length), missed: q.rubric.filter(function (x, j) { return !t[j]; }), comment: "Self-marked against the rubric." }; }
         r.marks = Math.max(0, Math.min(q.marks, Math.round(Number(r.marks) || 0)));
         at.wres[q.id] = r;
         written.push({ label: "Written " + (k + 1), marks: r.marks, of: q.marks, comment: r.comment, missed: r.missed });
@@ -847,6 +817,12 @@
     STORE.commit(true);
     if (pct >= ex.pass) U.toast(ex.title.split(" — ")[0] + " passed.");
     render(true);
+  };
+  ACT.copyWritten = function (el) {
+    const ex = COURSE.exams[el.dataset.id], at = APP.ui.attempt;
+    const wsec = ex && ex.sections.filter(function (s) { return s.kind === "written"; })[0];
+    if (!wsec || !at) return;
+    TUTOR.copy(TUTOR.writtenPrompt(ex, wsec.q.map(function (q) { return { q: q, key: examKey(ex, q, at), text: at.written[q.id] || "" }; })), "your written answers");
   };
   function examKey(ex, q, at) {
     if (q.chartRef !== undefined && at.charts[q.chartRef]) {
@@ -876,10 +852,9 @@
       h += "</tbody></table></div></section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>ALMANAC</span><h2>What you have measured</h2></div>" + almanacHTML() + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>CONSISTENCY</span><h2>" + cnt.done + " of " + cnt.total + " hours · streak " + P.streak() + "</h2></div>" + gridHTML() + "</section>";
-      h += settingsHTML() + TUTOR.settingsHTML();
+      h += settingsHTML();
       return h + "</div>";
-    },
-    after: function (p) { if (p.id === "tutor") { const el = U.$("#tutor-settings"); if (el) el.scrollIntoView({ block: "start" }); } }
+    }
   };
   function almanacHTML() {
     const rows = [];

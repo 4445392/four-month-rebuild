@@ -5,9 +5,9 @@ A personal trading course for one student, Sfundo (South Africa, SAST = GMT+2). 
 
 - **Mon–Sat:** hour 1 is a lesson (SEED: Simplify → Expand → Explain back → Drill); hour 2 applies that same lesson (bar replay, a lab or the Trading Floor).
 - **Sunday:** the weekly review, plus a gate exam when one is due.
-- 26 three-day units in nine modules (TRD 100–402), five gates and a Final, a Turtle-rules bar-replay simulator (the "Trading Floor"), labs, a trade journal and an AI tutor.
+- 26 three-day units in nine modules (TRD 100–402), five gates and a Final, a Turtle-rules bar-replay simulator (the "Trading Floor"), labs, a trade journal and a tutor (Claude, in the free Claude app).
 
-It started life as a claude.ai artifact. **The goal now:** a standalone, installable, offline-first PWA on GitHub Pages that needs nothing from claude.ai. `ROADMAP.md` lists the phases — do them in order, one per session, and plan before editing.
+It started life as a claude.ai artifact. **Now:** a standalone, installable, offline-first PWA on GitHub Pages — live at https://4445392.github.io/four-month-rebuild/ (Pages serves `main`, root; every push deploys). **It must stay totally free:** no paid APIs, no paid hosting, nothing that needs a card. `ROADMAP.md` lists the phases — do them in order, one per session, and plan before editing.
 
 ## The person using it (shapes copy and tutor prompts)
 - Big idea first, in plain English with an everyday analogy; then detail; formulas last. Diagrams help. He wants to be able to explain each idea to someone else.
@@ -19,7 +19,7 @@ There is no build step: classic scripts, no framework, no bundler.
 
 - Serve the folder over HTTP (service workers don't work on `file://`):
   `npm start` (or `python -m http.server 8080`), then open http://localhost:8080.
-- **Tests:** `npm install` once, then `npm test` — unit tests (`node --test`: plan maths via `tests/plan-check.mjs`, the sw.js stamp, journal statistics, tutor-client helpers) then Playwright browser tests in `tests/e2e/` (every route at five fixed dates, every lesson and plan day, backup → clear → restore and the claude.ai export, offline reload, the tutor against a stand-in API). Any console error fails a test. Locally Playwright uses the installed Edge (`PW_CHANNEL=chrome` for Chrome); GitHub Actions (`.github/workflows/test.yml`) runs everything on Chromium on every push.
+- **Tests:** `npm install` once, then `npm test` — unit tests (`node --test`: plan maths via `tests/plan-check.mjs`, the sw.js stamp, journal statistics, the .ics calendar) then Playwright browser tests in `tests/e2e/` (every route at five fixed dates, every lesson and plan day, backup → clear → restore and the claude.ai export, offline reload, the free tutor's prompts (and that nothing calls a paid API)). Any console error fails a test. Locally Playwright uses the installed Edge (`PW_CHANNEL=chrome` for Chrome); GitHub Actions (`.github/workflows/test.yml`) runs everything on Chromium on every push.
 - Plan maths self-check on its own: `node tests/plan-check.mjs` — it must print `NO PLAN ERRORS`.
 - **After changing any app file:** `node tools/stamp-sw.mjs`. It re-hashes the files into `sw.js` `VERSION` (otherwise installed copies never update) and fails if a file in css/js/fonts/icons is missing from `FILES`. The service worker serves cached files first, so while developing either use DevTools → Application → "Update on reload", or tap the "Update ready" toast.
 
@@ -28,8 +28,7 @@ There is no build step: classic scripts, no framework, no bundler.
 
 | File | Globals | What it holds |
 |---|---|---|
-| platform.js | `PLATFORM` | device layer: `storage` (JSON get/set/remove), `download()`, `pickFile()`, `ai` (tutor sampler or null), `sync` (null) |
-| ai-anthropic.js | `AI_ANTHROPIC` | the tutor's sampler on the student's own API key: Messages API over `fetch` (SSE streaming, tool loop, JSON replies), model list and prices, key/model/usage settings, "Test key" |
+| platform.js | `PLATFORM` | device layer: `storage` (JSON get/set/remove), `download()`, `pickFile()`, `theme`, `sync` (null) |
 | 20-course-meta.js | `COURSE` | modules, ranks, sources, orientation lessons, admission questionnaire; `COURSE.week()` registers units |
 | 21/22/23-course-*.js | (`COURSE.weeks`) | the 26 units — 3 lessons each (`big, plain, dia, body, ex, q, yt, src`), practical `P {task, steps[3], tools, num}`, Sunday deliverable `R` |
 | 24-exams.js | `COURSE.exams`, `COURSE.GEN` | gates g1–g5 and the Final; randomised calculation generators |
@@ -43,7 +42,7 @@ There is no build step: classic scripts, no framework, no bundler.
 | 56-floor.js | `FLOOR` | the Trading Floor: bar replay, free / Turtle S1 / S2 modes, Autopilot, CSV import |
 | 60-labs.js | — | labs: size, expectancy, recovery, streaks, Monte Carlo, drills |
 | 65-journal.js | `JOURNAL` | trade log, stats, segments, style diagnostic, gate evidence |
-| 70-tutor.js | `TUTOR` | tutor drawer and page; grading of explain-backs and written exam answers; extra drills; Settings → Tutor (key, model, usage) |
+| 70-tutor.js | `TUTOR` | the free tutor: drawer and page that build a briefing + question to paste into the Claude app; prompts for marking an explain-back, three more drills, feedback on written gate answers; "Copy for Claude" |
 | 75-calendar.js | `CALENDAR` | the plan as an .ics file (one 2-hour block per day at `settings.studyTime`, SAST; rest days all-day); panel on the Plan page |
 | 98-pwa.js | `PWA` | service-worker registration, "Update ready" toast (never reloads mid-exam), install button / iPhone instructions in Settings |
 | 99-boot.js | — | navigation chrome, `APP.cap.*` from `PLATFORM`, first render |
@@ -59,7 +58,7 @@ Outside `js/`: `sw.js` (precache + cache-first), `manifest.webmanifest`, `icons/
 ## Data (all on the device)
 **Storage:** IndexedDB database `four-month-rebuild`, object store `kv`, through `PLATFORM.storage` (`js/platform.js`). Boot awaits `storage.ready()`, which loads every key into memory; after that `get()` is synchronous and `set()` writes through at once (`flush()` resolves when it's on disk). The first run moves any `rebuild.*` localStorage keys across once (marker `rebuild.meta.migrated`) and removes them. If IndexedDB is unavailable it falls back to localStorage.
 
-**Keys:** `rebuild.v3.state`, `.trades`, `.writing`, `.threads`, `.floor` (Floor session), `.import` (CSV import, up to 6,000 bars), `.meta` (device-only: `lastBackup`), `.ai` (device-only: API key, model, monthly usage — never in backups). Boot also asks for persistent storage (`navigator.storage.persist()`); Settings shows the result, usage and the last backup date.
+**Keys:** `rebuild.v3.state`, `.trades`, `.writing`, `.threads`, `.floor` (Floor session), `.import` (CSV import, up to 6,000 bars), `.meta` (device-only: `lastBackup`). Boot also asks for persistent storage (`navigator.storage.persist()`); Settings shows the result, usage and the last backup date.
 
 **state (v4):**
 ```
@@ -89,29 +88,17 @@ Keep these shapes backward-compatible: the student will import his export from t
 Nothing calls `window.claude` any more. `99-boot.js` fills the old `APP.cap.*` names from `js/platform.js`, so the rest of the code didn't change:
 
 - `APP.cap.downloads.save({filename, data})` → `PLATFORM.download()`.
-- `APP.cap.sample` ← `PLATFORM.ai`, which boot sets to `AI_ANTHROPIC.fromSettings()` (null without a key → `TUTOR.available()` is false; tutor buttons become "Add your key in Settings" and marking is self-marking). `TUTOR.applyKey()` switches it at runtime.
 - `APP.cap.db`/`uid` ← `PLATFORM.sync` (`{db, uid}`, null). `STORE.pushNow`, `saveDoc`, `deleteDoc`, `initDb` and `syncCollection` stay dormant while it is null.
 - All saving goes through `PLATFORM.storage` (core and Floor) — IndexedDB since Phase 3.
 - Record → Settings: "Download my data" writes `{exported, app, state, trades, writing, threads}`. "Restore from a backup file" runs `STORE.checkBackup()`, shows counts, and replaces data only after confirmation. It accepts the claude.ai export (no `threads`).
 - Fonts are self-hosted in `/fonts` (Latin subsets, OFL licences alongside).
 
-**Sampler contract** — keep it, so `70-tutor.js` barely changes:
-```
-sample(turns, { onText({text, delta}), signal,
-                tools: [{name, description, inputSchema, execute(input)}] })
-  → Promise<{text, truncated}>
-sample.json(prompt, opts) → Promise<parsed JSON>
-sample.limits() → Promise<{tools: boolean}>
-```
-`opts.system` (optional) is sent as the system prompt. Errors reject with `{code, message, text?}`. The UI understands the codes handled in `TUTOR.errorText`: `bad_key` (401), `billing` (402), `forbidden` (403), `model_unavailable` (404), `prompt_too_large`, `rate_limited` (429), `overloaded` (529/5xx), `bad_request`, `refused`, `offline`, `cancelled`, `invalid_json`.
-
-**The tutor on the Messages API (`js/ai-anthropic.js`, Phase 4):**
-- Plain `fetch` to `https://api.anthropic.com/v1/messages` with `x-api-key`, `anthropic-version: 2023-06-01` and `anthropic-dangerous-direct-browser-access: true` (no SDK: no build step, no CDN). "Test key" calls `GET /v1/models/{model}`, which costs nothing.
-- Models: `claude-opus-5-5` (default), `claude-sonnet-5-5`, `claude-haiku-4-5`. Opus 5.5 and Sonnet 5.5 always think (never send `thinking: disabled`; it is a 400); `output_config.effort: "medium"`. Haiku gets neither field.
-- Opus/Sonnet requests send `fallbacks: "default"` with `anthropic-beta: server-side-fallback-2026-07-01`, so a classifier refusal is re-run server-side; a final `stop_reason: "refusal"` becomes `refused`.
-- Tool loop: the assistant turn is echoed back **unchanged** (thinking blocks with their signatures), all tool results go back in one user message, and `system`/`tools` stay byte-identical within a send (preserved thinking). Tools use `eager_input_streaming`, so inputs are checked against the schema before `execute` runs. Forced `tool_choice` is a 400 on these models; don't use it.
-- Top-level `cache_control: {type: "ephemeral"}` caches the long system prompt. Usage (incl. `usage.iterations` after a fallback) is added up per month and model in `rebuild.v3.ai`, with a cost estimate from the price table in the file — update prices there if they change.
-- Check model ids, headers and prices against current Anthropic docs before changing any of this.
+**The tutor is free (it runs in the Claude app).** Nothing in the app calls an AI API, so nothing can cost money:
+- `TUTOR.prompt(mode, ctx, question)` = a briefing (`rules()`: course facts, honesty rules, how he learns, the mode, and `contextText(ctx)` — the lesson, review, task, Floor session or journal he's on) + his question. The drawer's **Copy for Claude** copies it; he pastes it into the Claude app (or https://claude.ai/new).
+- Marks recorded in the app are always self-marks (explain-backs against the key points, written gate answers against the rubric). Claude gives a second opinion through `TUTOR.explainPrompt`, `TUTOR.drillsPrompt` and `TUTOR.writtenPrompt` (after submitting a gate).
+- Old tutor conversations (`threads`) from the claude.ai version are kept, shown read-only, and still travel in backups.
+- An API key saved by the short-lived paid version (`rebuild.v3.ai`) is deleted at start-up. `tests/e2e/tutor.spec.mjs` fails if anything requests `api.anthropic.com`.
+- The paid API client existed briefly (commit 84f847d, removed after); don't bring it back unless the student asks for a paid option.
 
 ## Speed and accessibility (Phase 7.3 and 7.4)
 - **Speed — measured, and lazy-loading lessons was not worth it.** With the CPU slowed 6× (a slow phone), compiling all three lesson files (`21/22/23-course-*.js`, ~250 KB, ~80 KB gzipped) takes ~20 ms, and blocking them entirely made no measurable difference to start-up. Start-up time goes on opening IndexedDB (~280 ms at 6× on a first visit) and the first render (~60 ms); after the first visit the service worker serves every file from cache. Re-measure before splitting the course files; splitting them would mean separating lesson metadata (titles, ids — used by the Plan, Today and Course pages) from lesson bodies.
@@ -123,7 +110,7 @@ sample.limits() → Promise<{tools: boolean}>
 
 ## Rules
 - **Offline-first:** after Phase 1 there are no runtime CDNs (fonts are self-hosted). Everything ships in the repo.
-- **No secrets in git.** The Anthropic API key is typed in by the user and stored only on the device.
+- **No secrets in git**, and no API keys anywhere: the app is free and stays free.
 - **Honesty in content and tutor:**
   - Never give trade signals or predictions.
   - Never promise profit.

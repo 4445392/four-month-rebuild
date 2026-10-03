@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const esc = U.esc;
-  const NAV = [["today", "Today", "The next thing to do"], ["plan", "Plan", "Every day, 1 Dec → 28 Mar"], ["course", "Course", "Nine modules, 26 units"], ["floor", "Trading Floor", "Bar-replay simulator"], ["labs", "Labs", "Calculators & simulations"], ["journal", "Journal", "Every trade, sliced"], ["tutor", "Tutor", "Office hours"], ["record", "Record", "Transcript & settings"]];
+  const NAV = [["today", "Today", "The next thing to do"], ["plan", "Plan", "Every day, 1 Dec → 28 Mar"], ["course", "Course", "Nine modules, 26 units"], ["floor", "Trading Floor", "Bar-replay simulator"], ["labs", "Labs", "Calculators & simulations"], ["journal", "Journal", "Every trade, sliced"], ["tutor", "Tutor", "Free, in the Claude app"], ["record", "Record", "Transcript & settings"]];
   const TABS = [["today", "Today"], ["plan", "Plan"], ["course", "Course"], ["floor", "Floor"], ["labs", "Labs"], ["journal", "Journal"], ["record", "Record"]];
   const navKey = function () {
     const v = APP.view.name;
@@ -24,7 +24,7 @@
     const top = U.$("#topstanding");
     if (top) top.textContent = rank.name + " · " + cnt.done + "/" + cnt.total;
     const fab = U.$("#fab");
-    if (fab) fab.hidden = !TUTOR.available() || !U.$("#drawer").hidden;
+    if (fab) fab.hidden = !U.$("#drawer").hidden;
   };
 
   /* Capabilities come from PLATFORM (js/platform.js) under the same APP.cap names the
@@ -39,13 +39,7 @@
     APP.view = APP.parseHash();
     APP.cap.downloads = { save: function (o) { PLATFORM.download(o.filename, o.data, o.type); return Promise.resolve(); } };
     window.render(true);
-    PLATFORM.ai = window.AI_ANTHROPIC ? AI_ANTHROPIC.fromSettings() : null; // the tutor, if a key is saved
-    const ai = PLATFORM.ai;
-    if (ai) {
-      APP.cap.sample = ai;
-      try { const lim = await ai.limits(); APP.cap.tools = !!(lim && lim.tools); } catch (e) { APP.cap.tools = false; }
-      window.softRender();
-    }
+    if (PLATFORM.storage.get("rebuild.v3.ai", null)) PLATFORM.storage.remove("rebuild.v3.ai"); // an API key from an earlier version: the tutor is free now
     const sync = PLATFORM.sync; /* {db, uid} — not built yet */
     if (sync && sync.db && sync.uid) {
       APP.cap.db = sync.db; APP.cap.uid = sync.uid;
