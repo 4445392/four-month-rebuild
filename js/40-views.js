@@ -188,7 +188,7 @@
       h += "<div class='legend plan-legend'><span><i class='sw lg-done'></i>Done</span><span><i class='sw lg-part'></i>Half done</span><span><i class='sw lg-open'></i>Open</span><span><i class='sw lg-locked'></i>Locked</span><span><i class='sw lg-gate'></i>Gate Sunday</span><span><i class='sw lg-rest'></i>Rest or buffer</span><span class='muted'>" + cnt.done + " of " + cnt.total + " hours done</span></div>";
       const maxW = pl.days[pl.days.length - 1].cw;
       for (let cw = 0; cw <= maxW; cw++) h += weekStrip(cw, false);
-      return h + "</div>";
+      return h + CALENDAR.panelHTML() + "</div>";
     }
   };
 

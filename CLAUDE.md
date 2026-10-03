@@ -43,7 +43,8 @@ There is no build step: classic scripts, no framework, no bundler.
 | 56-floor.js | `FLOOR` | the Trading Floor: bar replay, free / Turtle S1 / S2 modes, Autopilot, CSV import |
 | 60-labs.js | — | labs: size, expectancy, recovery, streaks, Monte Carlo, drills |
 | 65-journal.js | `JOURNAL` | trade log, stats, segments, style diagnostic, gate evidence |
-| 70-tutor.js | `TUTOR` | tutor drawer and page; grading of explain-backs and written exam answers; extra drills |
+| 70-tutor.js | `TUTOR` | tutor drawer and page; grading of explain-backs and written exam answers; extra drills; Settings → Tutor (key, model, usage) |
+| 75-calendar.js | `CALENDAR` | the plan as an .ics file (one 2-hour block per day at `settings.studyTime`, SAST; rest days all-day); panel on the Plan page |
 | 98-pwa.js | `PWA` | service-worker registration, "Update ready" toast (never reloads mid-exam), install button / iPhone instructions in Settings |
 | 99-boot.js | — | navigation chrome, `APP.cap.*` from `PLATFORM`, first render |
 

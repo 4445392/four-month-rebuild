@@ -91,3 +91,16 @@ test("the Sunday review offers this week's backup", async ({ page }) => {
   const [download] = await Promise.all([page.waitForEvent("download"), page.click("[data-act='weekBackup']")]);
   expect(download.suggestedFilename()).toMatch(/^four-month-rebuild-week-2-/);
 });
+
+test("the plan downloads as a calendar at the chosen time", async ({ page }) => {
+  await openApp(page);
+  await visit(page, "plan");
+  await page.fill("#cal-time", "07:00");
+  await page.dispatchEvent("#cal-time", "change");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("[data-act='calExport']")]);
+  expect(download.suggestedFilename()).toBe("four-month-rebuild-plan.ics");
+  const text = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8"));
+  expect(text.split("BEGIN:VEVENT").length - 1).toBe(121);
+  expect(text).toContain("DTSTART:20261201T050000Z");
+  expect(await page.evaluate(() => APP.state.settings.studyTime)).toBe("07:00");
+});
