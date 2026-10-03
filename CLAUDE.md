@@ -18,8 +18,9 @@ It started life as a claude.ai artifact. **The goal now:** a standalone, install
 There is no build step: classic scripts, no framework, no bundler.
 
 - Serve the folder over HTTP (service workers don't work on `file://`):
-  `python -m http.server 8080`, then open http://localhost:8080 (or `npx serve .`).
-- Plan maths self-check: `node tests/plan-check.mjs` — it must print `NO PLAN ERRORS`.
+  `npm start` (or `python -m http.server 8080`), then open http://localhost:8080.
+- **Tests:** `npm install` once, then `npm test` — unit tests (`node --test`: plan maths via `tests/plan-check.mjs`, the sw.js stamp, journal statistics, tutor-client helpers) then Playwright browser tests in `tests/e2e/` (every route at five fixed dates, every lesson and plan day, backup → clear → restore and the claude.ai export, offline reload, the tutor against a stand-in API). Any console error fails a test. Locally Playwright uses the installed Edge (`PW_CHANNEL=chrome` for Chrome); GitHub Actions (`.github/workflows/test.yml`) runs everything on Chromium on every push.
+- Plan maths self-check on its own: `node tests/plan-check.mjs` — it must print `NO PLAN ERRORS`.
 - **After changing any app file:** `node tools/stamp-sw.mjs`. It re-hashes the files into `sw.js` `VERSION` (otherwise installed copies never update) and fails if a file in css/js/fonts/icons is missing from `FILES`. The service worker serves cached files first, so while developing either use DevTools → Application → "Update on reload", or tap the "Update ready" toast.
 
 ## Architecture
@@ -123,5 +124,5 @@ sample.limits() → Promise<{tools: boolean}>
 - **Charts:** thin 2px lines, hairline grids, legends for two or more series. Colours come from the CSS tokens (light and dark).
 - **Naming:** course text says "Unit N" for content and "Week N" for the calendar. The calendar lives only in `25-plan.js`.
 - **Commits:** small and reviewable.
-- **Before committing:** run `node tools/stamp-sw.mjs` and `node tests/plan-check.mjs`, then click through Today, Plan, a lesson, an apply page, a review and the Floor with the console open.
+- **Before committing:** run `node tools/stamp-sw.mjs`, then `npm test`. Click through anything the tests don't cover with the console open.
 - **External APIs:** check anything about them (Anthropic Messages API, model ids, headers, pricing) against current official docs before coding it.

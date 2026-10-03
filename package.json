@@ -1,0 +1,18 @@
+{
+  "name": "four-month-rebuild",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Four-Month Rebuild — an offline-first trading course PWA.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "stamp": "node tools/stamp-sw.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

@@ -4,8 +4,9 @@ A four-month, two-hours-a-day trading course (Tue 1 Dec 2026 → Sun 28 Mar 2027
 Every day: a lesson, then that lesson applied. Sundays: review and gates.
 It includes a Turtle-rules bar-replay simulator, labs, a trade journal and a tutor.
 
-- **Run it locally:** `python -m http.server 8080`, then open http://localhost:8080
-- **Check the calendar maths:** `node tests/plan-check.mjs`
+- **Run it locally:** `npm start` (or `python -m http.server 8080`), then open http://localhost:8080
+- **Test it:** `npm install` once, then `npm test` (unit tests, then browser tests with Playwright)
+- **After changing any app file:** `node tools/stamp-sw.mjs`, so installed copies pick up the update
 - **How the code works:** see [CLAUDE.md](CLAUDE.md)
 - **What to build next:** see [ROADMAP.md](ROADMAP.md) (artifact → standalone, installable, offline PWA)
 

@@ -34,6 +34,7 @@
 
   /* ---------- queries & stats ---------- */
   const J = window.JOURNAL = {};
+  J.computeR = computeR; J.sessionOf = sessionOf; // exposed for the unit tests
   J.all = function () { return Object.keys(APP.trades).map(function (k) { return APP.trades[k]; }).filter(function (t) { return t && isFinite(t.R); }); };
   J.list = function (f) {
     f = f || {};
