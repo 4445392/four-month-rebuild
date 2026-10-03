@@ -83,3 +83,20 @@ test("add a key, get explain-back feedback and a streamed answer, then remove th
   await visit(page, "tutor");
   await expect(page.locator("main")).toContainText("runs on your own Anthropic API key");
 });
+
+test("Copy for Claude puts the lesson and how he learns on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await openApp(page);
+  await visit(page, "lesson/o1");
+  await page.locator("[data-act='copyForClaude']").first().click();
+  await expect(page.locator("#toasts")).toContainText("Copied — paste it into the Claude app");
+  const text = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n"); // Windows clipboards use CRLF
+  expect(text).toContain("The Four-Month Rebuild");
+  expect(text).toContain("Never give me trade signals");
+  expect(text).toContain("Here is the lesson I'm on:\nLesson 'The Bet'");
+  expect(text.trimEnd().endsWith("My question:")).toBeTruthy();
+
+  // without a key, the tutor drawer offers the same
+  await page.evaluate(() => TUTOR.open({ fresh: true, ctx: "lesson:o1" }));
+  await expect(page.locator("#t-msgs [data-act='copyForClaude']")).toBeVisible();
+});

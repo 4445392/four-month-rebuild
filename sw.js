@@ -9,7 +9,7 @@
    VERSION is a hash of FILES, stamped by `node tools/stamp-sw.mjs`.
    Run it after changing any app file, and add new files to FILES.
    ============================================================ */
-const VERSION = "e00100d916fb";
+const VERSION = "c49912f4f2f8";
 const CACHE = "rebuild-" + VERSION;
 const FILES = [
   "./",

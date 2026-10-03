@@ -117,6 +117,15 @@
       setTimeout(function () { el.classList.add("out"); }, 3200);
       setTimeout(function () { el.remove(); }, 3800);
     },
+    /* Copy text to the clipboard; resolves true when it worked. */
+    copy: function (text) {
+      const fallback = function () {
+        const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; } ta.remove(); return ok;
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallback(); });
+      return Promise.resolve(fallback());
+    },
     shuffle: function (a) { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = b[i]; b[i] = b[j]; b[j] = t; } return b; },
     srcTags: function (arr) {
       return (arr || []).map(function (k) { return "<span class='src'>" + U.esc(COURSE.SOURCES[k] || k) + "</span>"; }).join("");

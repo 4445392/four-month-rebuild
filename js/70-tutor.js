@@ -186,7 +186,7 @@
     U.$("#t-modes").innerHTML = Object.keys(MODES).map(function (k) { return "<button class='modeb" + (th.mode === k ? " on" : "") + "' data-act='tutorMode' data-m='" + k + "'>" + MODES[k][0] + "</button>"; }).join("");
     U.$("#t-ctx").textContent = "About: " + th.title;
     const box = U.$("#t-msgs");
-    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p>" + (APP.cap.sampleBlocked ? "" : "<p>" + T.keyButton("sm") + "</p>") + "</div>"; }
+    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p>" + (APP.cap.sampleBlocked ? "" : "<p>" + T.keyButton("sm") + "</p>") + "<p class='small'>Or ask Claude in the Claude app instead: <button class='btn xs ghost' data-act='copyForClaude'>Copy for Claude</button></p></div>"; }
     else if (!th.msgs.length) box.innerHTML = "<div class='msg a hint'><p><b>" + esc(MODES[th.mode][0]) + " mode.</b> " + esc(MODES[th.mode][1]) + "</p><p class='small'>Ask anything about the course, markets, risk or your own journal. The tutor won't give trade signals.</p></div>";
     else box.innerHTML = th.msgs.map(function (m) { return "<div class='msg " + (m.r === "u" ? "u" : "a") + "'>" + (m.r === "u" ? "<p>" + esc(m.t).replace(/\n/g, "<br>") + "</p>" : U.md(m.t)) + "</div>"; }).join("");
     box.scrollTop = box.scrollHeight;
@@ -298,6 +298,21 @@
     }
   };
   ACT.tutorStart = function (el) { T.open({ fresh: true, ctx: "coach", mode: el.dataset.m }); };
+
+  /* ---------- "Copy for Claude": the same context, ready to paste into the Claude app ---------- */
+  const ABOUT_ME = "How I learn best: give me the big idea first, in plain English with an everyday analogy; then the detail; formulas last. A small diagram helps. Keep answers short, and end with one question that checks I could explain it to someone else. If you show code, use Java. Never give me trade signals or predictions.";
+  T.claudeText = function (ctx) {
+    const head = "I'm studying \"The Four-Month Rebuild\", my own two-hours-a-day trading course (1 Dec 2026 – 28 Mar 2027), built around the 1983 Turtle experiment: risk first, rules over predictions.";
+    if (ctx && ctx.indexOf("lesson:") === 0) {
+      const l = P.lesson(ctx.slice(7));
+      if (l) return [head, ABOUT_ME, "Here is the lesson I'm on:\n" + lessonText(l, true), "My question: "].join("\n\n");
+    }
+    return [head, ABOUT_ME, "Context from my course app (it describes me in the third person):\n" + contextText(ctx), "My question: "].join("\n\n");
+  };
+  ACT.copyForClaude = function (el) {
+    const ctx = el.dataset.ctx || (T.cur && T.cur.ctx) || currentCtx();
+    U.copy(T.claudeText(ctx)).then(function (ok) { U.toast(ok ? "Copied — paste it into the Claude app and add your question." : "Couldn't copy here — your browser blocked the clipboard.", ok ? "" : "bad"); });
+  };
 
   /* ---------- Record → Settings → Tutor (API key, model, usage) ---------- */
   const AI = window.AI_ANTHROPIC;

@@ -13,6 +13,7 @@
   const tutorBtn = function (label, preset, ctx) {
     return "<button class='btn ghost sm' data-act='tutorAsk' data-preset='" + esc(preset) + "' data-ctx='" + esc(ctx || "") + "'>" + esc(label) + "</button>";
   };
+  const claudeBtn = function (ctx) { return "<button class='btn ghost sm' data-act='copyForClaude' data-ctx='" + esc(ctx) + "' title='Copies this lesson and how you like to learn, ready to paste into the Claude app'>Copy for Claude</button>"; };
   const statusOf = function (it) { return P.isDone(it) ? "done" : P.isLocked(it) ? "locked" : "open"; };
   window.VIEWUTIL = { chip: chip, modChip: modChip };
 
@@ -274,12 +275,12 @@
       h += "<div class='plain'><div class='label'>In plain English</div><p>" + U.inline(l.plain) + "</p></div>";
       if (l.dia) [].concat(l.dia).forEach(function (k) { h += DIAG.render(k); });
       if (l.yt && l.yt.length) h += "<div class='watch'><div class='label'>Watch (opens YouTube search)</div>" + l.yt.map(function (q) { return "<a class='btn ghost sm' target='_blank' rel='noopener' href='https://www.youtube.com/results?search_query=" + encodeURIComponent(q) + "'>" + esc(q) + "</a>"; }).join("") + "</div>";
-      h += "<div class='row'><button class='btn primary' data-act='lessonNext' data-id='" + l.id + "' data-from='s'>I've got the big idea → Expand</button>" + tutorBtn("Explain it another way", "another", "lesson:" + l.id) + "</div>";
+      h += "<div class='row'><button class='btn primary' data-act='lessonNext' data-id='" + l.id + "' data-from='s'>I've got the big idea → Expand</button>" + tutorBtn("Explain it another way", "another", "lesson:" + l.id) + claudeBtn("lesson:" + l.id) + "</div>";
       return h;
     }
     if (step === "e") {
       let h = "<div class='prose'>" + U.body(l.body) + "</div>";
-      h += "<div class='askrow'><span class='label'>Ask the tutor</span>" + tutorBtn("Go deeper", "deeper", "lesson:" + l.id) + tutorBtn("Another analogy", "analogy", "lesson:" + l.id) + tutorBtn("Worked example", "example", "lesson:" + l.id) + tutorBtn("Quiz me on this", "quiz", "lesson:" + l.id) + "</div>";
+      h += "<div class='askrow'><span class='label'>Ask the tutor</span>" + tutorBtn("Go deeper", "deeper", "lesson:" + l.id) + tutorBtn("Another analogy", "analogy", "lesson:" + l.id) + tutorBtn("Worked example", "example", "lesson:" + l.id) + tutorBtn("Quiz me on this", "quiz", "lesson:" + l.id) + claudeBtn("lesson:" + l.id) + "</div>";
       h += "<div class='row'><button class='btn primary' data-act='lessonNext' data-id='" + l.id + "' data-from='e'>Ready to explain it back →</button></div>";
       return h;
     }
