@@ -120,7 +120,7 @@ COURSE.ORIENTATION = [
       "**The apply hour.** Real historical price in TradingView Bar Replay, a lab, or the Trading Floor simulator. A unit's three apply hours build one measurement that ends in a number — a frequency, a percentage, an expectancy — and it goes into your **Almanac**, the record of what *you* have measured about markets.",
       "**The gates.** Five module exams at 80%, sat on Sundays, plus the Final. You can read ahead, but you can't do the next module's work until the gate is passed. There's an honest override: it's logged on your record, in red, forever.",
       "**Ranks.** Applicant → Trainee (after this orientation) → Probationer (Gate 4 — demo trading unlocks) → Funded Turtle (Gate 5) → Graduate (the four-month audit).",
-      "**The tutor.** Ask anything, any time. It knows the course and — when you ask — your own journal numbers. It runs on your Claude usage.",
+      "**The tutor.** Ask anything, any time. It knows the course and — when you ask — your own journal numbers. It runs on your own Anthropic API key, added in Settings.",
       "**The calendar.** Orientation starts Tue 1 Dec 2026, Week 1 starts Mon 7 Dec, and the Final is on Sun 28 Mar 2027. Rest days: 25 December and 1 January. Three buffer days (29–31 Mar) catch any slip. The Plan page shows every day.",
       "**What this can and cannot do.** Two hours a day for four months is about 220 hours. That is enough to make you **competent with a tested system** and a risk framework you can defend. It is not enough to make you a master — mastery is measured in years and thousands of trades. Anyone who promises otherwise is selling something, and you have already paid that tuition once.",
       "**Built against the five things that broke your first attempt:**",

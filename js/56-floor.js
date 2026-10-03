@@ -15,8 +15,8 @@
     ticket: { side: 1, type: "market", entry: "", stop: "", target: "", risk: 0.5, checks: {} },
     ov: { ch: true, sw: false }, checklistMode: false
   };
-  const readLS = function (k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
-  const writeLS = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } };
+  const readLS = function (k) { return PLATFORM.storage.get(k, null); };
+  const writeLS = function (k, v) { return PLATFORM.storage.set(k, v); };
   const specById = function (id) { return ENGINE.SPECS.filter(function (s) { return s.id === id; })[0]; };
   const loadImport = function () { return readLS(LS_IMP); };
 
@@ -516,7 +516,7 @@
         const keep = 6000, k0 = Math.max(0, p.c.length - keep);
         const imp = { name: name, tf: tf, o: p.o.slice(k0), h: p.h.slice(k0), l: p.l.slice(k0), c: p.c.slice(k0), d: p.d.slice(k0) };
         if (imp.c.length < 200) throw new Error("Need at least 200 bars for a session.");
-        try { localStorage.setItem(LS_IMP, JSON.stringify(imp)); } catch (e) { throw new Error("This browser won't store that much data — try a shorter file."); }
+        if (!writeLS(LS_IMP, imp)) throw new Error("This browser won't store that much data — try a shorter file.");
         U.toast("Imported " + imp.c.length + " bars of " + name + ".");
         const mk = U.$("#fl-mk"); if (mk) mk.value = "IMP";
         refresh();

@@ -7,9 +7,9 @@
   <meta name="description" content="A four-month, two-hours-a-day trading course: SEED lessons, gates, a Turtle-rules Trading Floor, labs, a journal and a tutor.">
   <meta name="theme-color" content="#152029">
   <link rel="icon" href="data:,"><!-- placeholder until Phase 2 adds real icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="css/app.css">
   <!-- Scripts are classic (non-module) scripts that share globals. ORDER MATTERS — see CLAUDE.md. -->
+  <script defer src="js/platform.js"></script>
   <script defer src="js/20-course-meta.js"></script>
   <script defer src="js/21-course-w01-08.js"></script>
   <script defer src="js/22-course-w09-15.js"></script>
@@ -47,7 +47,7 @@
     <div class="ctxchip" id="t-ctx"></div>
     <div class="msgs" id="t-msgs" aria-live="polite"></div>
     <div class="composer"><textarea id="t-in" rows="2" placeholder="Ask anything… (Enter sends, Shift+Enter for a new line)"></textarea><button class="btn primary" id="t-send" data-act="tutorSend">Send</button><button class="btn" id="t-stop" data-act="tutorStop" hidden>Stop</button></div>
-    <div class="dnote">Runs on your Claude usage · never gives trade signals</div>
+    <div class="dnote">Never gives trade signals</div>
   </aside>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 </div>

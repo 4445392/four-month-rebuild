@@ -20,37 +20,31 @@
     if (tb) tb.innerHTML = TABS.map(function (n) { return "<a class='tabi" + (cur === n[0] ? " on" : "") + "' href='#/" + n[0] + "'>" + esc(n[1]) + "</a>"; }).join("");
     const st = U.$("#rail-standing");
     if (st) st.innerHTML = "<div class='lbl'>Standing</div><div class='rnk'>" + esc(rank.name) + "</div><div class='meter dark'><span style='width:" + (100 * cnt.done / cnt.total).toFixed(1) + "%'></span></div><div class='lbl'>" + cnt.done + " / " + cnt.total + " hours · streak " + P.streak() + "</div>" +
-      "<div class='lbl store'>" + (APP.cap.dbMode === "synced" ? "Saved to your private cloud" : APP.cap.dbMode === "connecting" ? "Connecting…" : "Saved in this browser") + "</div>";
+      "<div class='lbl store'>" + (APP.cap.dbMode === "synced" ? "Saved and synced" : APP.cap.dbMode === "connecting" ? "Connecting…" : "Saved on this device") + "</div>";
     const top = U.$("#topstanding");
     if (top) top.textContent = rank.name + " · " + cnt.done + "/" + cnt.total;
     const fab = U.$("#fab");
     if (fab) fab.hidden = !TUTOR.available() || !U.$("#drawer").hidden;
   };
 
+  /* Capabilities come from PLATFORM (js/platform.js) under the same APP.cap names the
+     claude.ai artifact used, so the rest of the app doesn't care where they come from. */
   async function boot() {
     STORE.load();
     APP.view = APP.parseHash();
+    APP.cap.downloads = { save: function (o) { PLATFORM.download(o.filename, o.data, o.type); return Promise.resolve(); } };
     window.render(true);
-    const C = window.claude;
-    if (!C || typeof C.use !== "function") { APP.cap.dbMode = "local"; window.renderChrome(); return; }
-    C.use("sample").then(async function (s) {
-      if (s) {
-        APP.cap.sample = s;
-        try { const lim = await s.limits(); APP.cap.tools = !!(lim && lim.tools); } catch (e) { APP.cap.tools = false; }
-        window.softRender();
-      }
-      window.renderChrome();
-    }).catch(function () { window.renderChrome(); });
-    C.use("downloads").then(function (d) { APP.cap.downloads = d; }).catch(function () { /* absent */ });
-    try {
-      const pair = await Promise.all([C.use("db"), C.use("user")]);
-      const db = pair[0], user = pair[1];
-      if (db && user) {
-        const id = await user.id();
-        if (id) { APP.cap.db = db; APP.cap.user = user; APP.cap.uid = id; await STORE.initDb(); }
-        else APP.cap.dbMode = "local";
-      } else APP.cap.dbMode = "local";
-    } catch (e) { APP.cap.dbMode = "local"; }
+    const ai = PLATFORM.ai;
+    if (ai) {
+      APP.cap.sample = ai;
+      try { const lim = await ai.limits(); APP.cap.tools = !!(lim && lim.tools); } catch (e) { APP.cap.tools = false; }
+      window.softRender();
+    }
+    const sync = PLATFORM.sync; /* {db, uid} — not built yet */
+    if (sync && sync.db && sync.uid) {
+      APP.cap.db = sync.db; APP.cap.uid = sync.uid;
+      try { await STORE.initDb(); } catch (e) { APP.cap.dbMode = "local"; }
+    } else APP.cap.dbMode = "local";
     window.renderChrome();
   }
   const d = U.$("#drawer");

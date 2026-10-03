@@ -1,5 +1,5 @@
 /* ============================================================
-   CORE — utilities, store (localStorage + db sync), progress
+   CORE — utilities, store (PLATFORM.storage + dormant sync), progress
    logic, router and the action registry.
    ============================================================ */
 (function () {
@@ -154,8 +154,15 @@
     out.sim = Object.assign({ sessions: 0, bars: 0 }, out.sim || {});
     return out;
   }
-  const readLS = function (k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
-  const writeLS = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } };
+  const readLS = function (k, d) { return PLATFORM.storage.get(k, d); };
+  const writeLS = function (k, v) { return PLATFORM.storage.set(k, v); };
+  /* Backups store maps as {id: doc}; accept arrays too, keyed by id. */
+  const asMap = function (v) {
+    const out = {};
+    if (Array.isArray(v)) v.forEach(function (d) { if (d && typeof d === "object" && d.id) out[d.id] = d; });
+    else if (v && typeof v === "object") Object.keys(v).forEach(function (k) { if (v[k] && typeof v[k] === "object") out[k] = v[k]; });
+    return out;
+  };
 
   const STORE = window.STORE = {
     DEFAULT_CHECKLIST: DEFAULT_CHECKLIST,
@@ -181,6 +188,37 @@
       });
     },
     saveLocal: function () { writeLS(LS.state, APP.state); },
+    /* ---- backups: {exported, state, trades, writing, threads} (the claude.ai export has no threads) ---- */
+    backupText: function () {
+      return JSON.stringify({ exported: new Date().toISOString(), app: "four-month-rebuild", state: APP.state, trades: APP.trades, writing: APP.writing, threads: APP.threads }, null, 2);
+    },
+    /* Parse and validate a backup file. Throws Error(message) if it can't be used; changes nothing. */
+    checkBackup: function (text) {
+      let d;
+      try { d = JSON.parse(text); } catch (e) { throw new Error("That file isn't a backup from this app — it isn't valid JSON."); }
+      if (!d || typeof d !== "object" || Array.isArray(d) || !d.state || typeof d.state !== "object" || Array.isArray(d.state)) throw new Error("That file doesn't contain any course progress, so it can't be restored.");
+      const st = d.state, cnt = function (o, f) { return Object.keys(o || {}).filter(function (k) { return o[k] && f(o[k]); }).length; };
+      const data = { state: st, trades: asMap(d.trades), writing: asMap(d.writing), threads: asMap(d.threads) };
+      const counts = {
+        exported: typeof d.exported === "string" ? d.exported : "",
+        lessons: cnt(st.lessons, function (l) { return l.done; }),
+        practicals: Object.keys(st.practicals || {}).reduce(function (n, k) { const p = st.practicals[k]; return n + (p && Array.isArray(p.sessions) ? p.sessions.filter(Boolean).length : 0); }, 0),
+        reviews: cnt(st.reviews, function (r) { return r.done; }),
+        exams: cnt(st.exams, function (x) { return x.attempts || x.best !== undefined || x.passedAt; }),
+        trades: Object.keys(data.trades).length,
+        writing: Object.keys(data.writing).length,
+        threads: Object.keys(data.threads).length
+      };
+      return { data: data, counts: counts };
+    },
+    /* Replace everything on this device with a checked backup. */
+    restore: function (data) {
+      APP.state = normalise(U.clone(data.state));
+      APP.trades = U.clone(data.trades || {}); APP.writing = U.clone(data.writing || {}); APP.threads = U.clone(data.threads || {});
+      const ok = [writeLS(LS.state, APP.state), writeLS(LS.trades, APP.trades), writeLS(LS.writing, APP.writing), writeLS(LS.threads, APP.threads)].every(Boolean);
+      if (!ok) throw new Error("This browser wouldn't save all of it (storage full or blocked).");
+      STORE.schedulePush();
+    },
     saveMap: function (name) { writeLS(LS[name], APP[name]); },
     commit: function (activity) {
       APP.state.updatedAt = Date.now();

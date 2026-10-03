@@ -26,12 +26,13 @@ There is no build step: classic scripts, no framework, no bundler.
 
 | File | Globals | What it holds |
 |---|---|---|
+| platform.js | `PLATFORM` | device layer: `storage` (JSON get/set/remove), `download()`, `pickFile()`, `ai` (tutor sampler, null until Phase 4), `sync` (null) |
 | 20-course-meta.js | `COURSE` | modules, ranks, sources, orientation lessons, admission questionnaire; `COURSE.week()` registers units |
 | 21/22/23-course-*.js | (`COURSE.weeks`) | the 26 units — 3 lessons each (`big, plain, dia, body, ex, q, yt, src`), practical `P {task, steps[3], tools, num}`, Sunday deliverable `R` |
 | 24-exams.js | `COURSE.exams`, `COURSE.GEN` | gates g1–g5 and the Final; randomised calculation generators |
 | 25-plan.js | `COURSE.PLAN`, `COURSE.TASKS` | the calendar: 121 days with hour-1/hour-2 items, rest days, gate Sundays, special-day tasks |
 | 50-engine.js | `ENGINE` | synthetic markets (regime Markov chain, GARCH volatility, fat tails), indicators (N, Donchian), the Turtle rules, stats |
-| 10-core.js | `APP, U, STORE, P, VIEWS, ACT, go, render, softRender` | state, utilities, storage and (dormant) cloud sync, progress and pacing, hash router, action registry |
+| 10-core.js | `APP, U, STORE, P, VIEWS, ACT, go, render, softRender` | state, utilities, storage (via `PLATFORM.storage`), backups (`backupText`, `checkBackup`, `restore`), (dormant) cloud sync, progress and pacing, hash router, action registry |
 | 30-diagrams.js | `DIAG` | inline-SVG teaching diagrams, themed through CSS classes |
 | 54-svgcharts.js | `SVGC` | small SVG charts (line with hover, bars, R histogram) |
 | 55-chart.js | `PriceChart` | canvas candlestick chart (channels, swings, trades, crosshair, pan/zoom, pick-a-level) |
@@ -40,7 +41,7 @@ There is no build step: classic scripts, no framework, no bundler.
 | 60-labs.js | — | labs: size, expectancy, recovery, streaks, Monte Carlo, drills |
 | 65-journal.js | `JOURNAL` | trade log, stats, segments, style diagnostic, gate evidence |
 | 70-tutor.js | `TUTOR` | tutor drawer and page; grading of explain-backs and written exam answers; extra drills |
-| 99-boot.js | — | navigation chrome, capability detection, first render |
+| 99-boot.js | — | navigation chrome, `APP.cap.*` from `PLATFORM`, first render |
 
 **Patterns**
 - **Routing:** `#/view/id/sub` → `VIEWS[view].render(params)` returns HTML. Optional `after()`, `leave()`, `key()` and `noSoft`.
@@ -75,13 +76,15 @@ There is no build step: classic scripts, no framework, no bundler.
 
 Keep these shapes backward-compatible: the student will import his export from the claude.ai version (Record → "Download my data", shape `{exported, state, trades, writing}`).
 
-## Claude-runtime touchpoints (Phases 1 and 4 replace these)
-The artifact got four abilities from `window.claude.use(name)`. Outside claude.ai, `window.claude` is undefined and the app already falls back to local mode, but these places still assume it:
+## Platform layer (Phase 1 — done)
+Nothing calls `window.claude` any more. `99-boot.js` fills the old `APP.cap.*` names from `js/platform.js`, so the rest of the code didn't change:
 
-- **99-boot.js** `boot()`: `use("sample")` → `APP.cap.sample`; `use("downloads")`; `use("db")` + `use("user")` → `STORE.initDb()`.
-- **10-core.js** `STORE`: `pushNow`, `saveDoc`, `deleteDoc`, `initDb` and `syncCollection` talk to `APP.cap.db` (cloud sync). They stay dormant while `APP.cap.db` is null.
-- **40-views.js**: `ACT.exportData` uses `APP.cap.downloads.save()`. The settings and review screens say data is "synced" and "Claude can read it" — not true any more.
-- **70-tutor.js**: `APP.cap.sample(turns, opts)`, `APP.cap.sample.json(prompt, opts)` and `.limits()`; the footer says it "runs on your Claude usage".
+- `APP.cap.downloads.save({filename, data})` → `PLATFORM.download()`.
+- `APP.cap.sample` ← `PLATFORM.ai` (null → `TUTOR.available()` is false; buttons hide and `TUTOR.noKeyText` explains that a key is needed). **Phase 4** sets `PLATFORM.ai` to a sampler that follows the contract below.
+- `APP.cap.db`/`uid` ← `PLATFORM.sync` (`{db, uid}`, null). `STORE.pushNow`, `saveDoc`, `deleteDoc`, `initDb` and `syncCollection` stay dormant while it is null.
+- All saving goes through `PLATFORM.storage` (core and Floor). **Phase 3** swaps its insides for IndexedDB.
+- Record → Settings: "Download my data" writes `{exported, app, state, trades, writing, threads}`. "Restore from a backup file" runs `STORE.checkBackup()`, shows counts, and replaces data only after confirmation. It accepts the claude.ai export (no `threads`).
+- Fonts are self-hosted in `/fonts` (Latin subsets, OFL licences alongside).
 
 **Sampler contract** — keep it, so `70-tutor.js` barely changes:
 ```

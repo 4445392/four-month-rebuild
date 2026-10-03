@@ -1,5 +1,5 @@
 /* ============================================================
-   TUTOR — office hours with Claude via the `sample` capability.
+   TUTOR — office hours with Claude via APP.cap.sample (PLATFORM.ai).
    Modes: Explain (patient lecturer), Socratic, Examiner, Coach.
    Also marks explain-backs (RIGHT / PARTIAL / BROKE) and written
    exam answers against their rubrics, and writes extra drills.
@@ -15,6 +15,7 @@
   };
   const T = window.TUTOR = { cur: null, ctl: null, busy: false };
   T.available = function () { return !!APP.cap.sample && !APP.cap.sampleBlocked; };
+  T.noKeyText = "The tutor needs your own Anthropic API key, which you'll be able to add in Settings in a coming update. Until then, explain-backs and written answers are self-marked.";
   T.errorText = function (e) {
     const c = e && e.code;
     if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].indexOf(c) >= 0) { APP.cap.sampleBlocked = true; setTimeout(function () { window.renderChrome(); }, 0); return "The tutor isn't available here (permission wasn't given)."; }
@@ -176,7 +177,7 @@
     U.$("#t-modes").innerHTML = Object.keys(MODES).map(function (k) { return "<button class='modeb" + (th.mode === k ? " on" : "") + "' data-act='tutorMode' data-m='" + k + "'>" + MODES[k][0] + "</button>"; }).join("");
     U.$("#t-ctx").textContent = "About: " + th.title;
     const box = U.$("#t-msgs");
-    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>The tutor isn't available in this view — it needs the Claude app's permission to use your Claude usage. Everything else in the programme works; explain-backs and written answers can be self-marked.</p></div>"; }
+    if (!T.available()) { box.innerHTML = "<div class='msg a'><p>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Everything else in the programme works, and explain-backs and written answers can be self-marked." : T.noKeyText) + "</p></div>"; }
     else if (!th.msgs.length) box.innerHTML = "<div class='msg a hint'><p><b>" + esc(MODES[th.mode][0]) + " mode.</b> " + esc(MODES[th.mode][1]) + "</p><p class='small'>Ask anything about the course, markets, risk or your own journal. The tutor won't give trade signals.</p></div>";
     else box.innerHTML = th.msgs.map(function (m) { return "<div class='msg " + (m.r === "u" ? "u" : "a") + "'>" + (m.r === "u" ? "<p>" + esc(m.t).replace(/\n/g, "<br>") + "</p>" : U.md(m.t)) + "</div>"; }).join("");
     box.scrollTop = box.scrollHeight;
@@ -278,13 +279,13 @@
   VIEWS.tutor = {
     render: function () {
       let h = "<div class='page'><header class='pagehead'><div class='eyebrow'>Office hours</div><h1>The Tutor</h1><p class='lede'>Ask anything — about a lesson, a calculation, your journal, or why you keep breaking a rule. It knows the course and, when you ask, your own numbers. It won't give trade signals.</p></header>";
-      if (!T.available()) h += "<div class='banner locked'>" + (APP.cap.sample === null && !APP.cap.sampleBlocked ? "Connecting to the tutor…" : "The tutor isn't available in this view. It runs inside the Claude app on your own Claude usage; when it's unavailable, explain-backs and written answers are self-marked.") + "</div>";
+      if (!T.available()) h += "<div class='banner locked'>" + esc(APP.cap.sampleBlocked ? "The tutor can't be used right now. Explain-backs and written answers are self-marked in the meantime." : T.noKeyText) + "</div>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>MODES</span><h2>Four ways to learn with it</h2></div><div class='modes-grid'>" + Object.keys(MODES).map(function (k) { return "<div class='mode-card'><h3>" + esc(MODES[k][0]) + "</h3><p class='small'>" + esc(MODES[k][1]) + "</p><button class='btn sm' data-act='tutorStart' data-m='" + k + "'" + (T.available() ? "" : " disabled") + ">Start in " + esc(MODES[k][0]) + " mode</button></div>"; }).join("") + "</div></section>";
       const ths = Object.keys(APP.threads).map(function (k) { return APP.threads[k]; }).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
       h += "<section class='panel'><div class='sec-head'><span class='code'>HISTORY</span><h2>Past conversations</h2></div>";
       if (!ths.length) h += "<p class='muted'>None yet.</p>";
       else h += "<div class='threads'>" + ths.slice(0, 40).map(function (t) { return "<div class='thread'><button class='linkish' data-act='tutorThread' data-id='" + esc(t.id) + "'><b>" + esc(t.title || "Conversation") + "</b><span class='small muted'>" + esc(MODES[t.mode] ? MODES[t.mode][0] : "") + " · " + (t.msgs ? t.msgs.length : 0) + " messages · " + esc(new Date(t.updatedAt || t.at || Date.now()).toLocaleDateString("en-ZA")) + "</span></button><button class='btn xs ghost' data-act='tutorDelThread' data-id='" + esc(t.id) + "'>Delete</button></div>"; }).join("") + "</div>";
-      return h + "</section><p class='small muted'>The tutor uses your Claude usage. Conversations are saved privately with your progress.</p></div>";
+      return h + "</section><p class='small muted'>Conversations are saved on this device with your progress.</p></div>";
     }
   };
   ACT.tutorStart = function (el) { T.open({ fresh: true, ctx: "coach", mode: el.dataset.m }); };

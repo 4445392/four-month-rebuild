@@ -287,7 +287,7 @@
     if (step === "x") {
       const wr = APP.writing["x-" + l.id];
       const draft = APP.ui["draft-" + l.id] !== undefined ? APP.ui["draft-" + l.id] : (wr ? wr.text : "");
-      let h = "<div class='prompt'><div class='label'>Explain it back</div><p>" + U.inline(l.ex.p) + "</p><p class='muted small'>Write it for a friend who has never traded. Plain words first; use numbers where they help. The tutor marks it RIGHT, PARTIAL or BROKE and shows the first place your reasoning slipped.</p></div>";
+      let h = "<div class='prompt'><div class='label'>Explain it back</div><p>" + U.inline(l.ex.p) + "</p><p class='muted small'>Write it for a friend who has never traded. Plain words first; use numbers where they help. " + (TUTOR.available() ? "The tutor marks it RIGHT, PARTIAL or BROKE and shows the first place your reasoning slipped." : "Then compare it with the model answer and mark it yourself: RIGHT, PARTIAL or BROKE. " + esc(TUTOR.noKeyText)) + "</p></div>";
       h += "<textarea id='xb-" + l.id + "' class='essay' rows='7' data-inp='draftX' data-id='" + l.id + "' placeholder='In my own words…'>" + esc(draft) + "</textarea>";
       h += "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn primary' data-act='checkExplain' data-id='" + l.id + "'>Check my explanation</button>" : "") +
         "<button class='btn " + (TUTOR.available() ? "ghost" : "primary") + "' data-act='selfMark' data-id='" + l.id + "'>" + (TUTOR.available() ? "Self-mark instead" : "Show the model answer and self-mark") + "</button></div>";
@@ -541,7 +541,7 @@
         "<label class='field'><span>How consistent was I this week? (1 = barely showed up, 5 = both hours, every day, on time)</span><input id='rv-cons' type='number' min='1' max='5' value='" + esc(rv.cons || "") + "' data-chg='rvField' data-w='" + cw + "' data-k='cons'></label></div>" +
         "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" : "") +
         "<button class='btn primary' data-act='submitReview' data-w='" + cw + "'>" + (rv.done ? "Update my review" : "Submit my review") + "</button></div>" +
-        (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Claude can read it on Sunday — or paste the text below into the chat.</div>" : "") + "</section>";
+        (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
       if (rday.h2 && rday.h2.type === "exam") { const ex = COURSE.exams[rday.h2.id]; h += "<section class='panel gate'><div class='sec-head'><span class='code'>HOUR 2 · GATE</span><h2>" + esc(ex.title) + "</h2></div><p>" + esc(ex.intro) + "</p><a class='btn primary' href='#/exam/" + ex.id + "'>Go to the gate</a></section>"; }
       return h + "</div>";
@@ -741,7 +741,7 @@
         h += "</section>";
       }
       if (sec.kind === "written") {
-        h += "<section class='panel'><div class='sec-head'><span class='code'>PART " + (si + 1) + "</span><h2>Written" + (TUTOR.available() ? " — marked by the tutor" : " — self-marked") + "</h2></div>";
+        h += "<section class='panel'><div class='sec-head'><span class='code'>PART " + (si + 1) + "</span><h2>Written" + (TUTOR.available() ? " — marked by the tutor" : " — self-marked") + "</h2></div>" + (TUTOR.available() ? "" : "<p class='small muted'>" + esc(TUTOR.noKeyText) + "</p>");
         sec.q.forEach(function (q) {
           const v = at.written[q.id] || "";
           h += "<div class='q'><div class='qq'><span class='qn'>" + q.marks + " marks</span>" + esc(q.q) + "</div>";
@@ -899,22 +899,48 @@
   }
   function settingsHTML() {
     const s = S();
-    const dbLine = APP.cap.dbMode === "synced" ? "Synced to your private cloud storage — your progress follows you across devices, and Claude can read your journal and reviews when you ask." : APP.cap.dbMode === "connecting" ? "Connecting to cloud storage…" : "Saved in this browser only" + (APP.cap.dbError ? " (" + esc(APP.cap.dbError) + ")" : "") + ".";
+    const dbLine = APP.cap.dbMode === "synced" ? "Saved on this device and synced." : APP.cap.dbMode === "connecting" ? "Connecting…" : "Saved on this device only, in this browser" + (APP.cap.dbError ? " (" + esc(APP.cap.dbError) + ")" : "") + ". Clearing the browser's data would erase it, so download a backup now and then.";
     return "<section class='panel'><div class='sec-head'><span class='code'>SETTINGS</span><h2>Settings and data</h2></div><div class='form'>" +
       "<label class='field'><span>What the tutor calls you</span><input id='set-name' type='text' value='" + esc(s.name) + "' data-chg='setName'></label>" +
       "<div class='field'><span>Your plan</span><p class='small'>Orientation " + esc(U.longDate(COURSE.PLAN.start)) + " 2026 · Week 1 " + esc(U.longDate(COURSE.PLAN.week1)) + " · Final " + esc(U.longDate(COURSE.PLAN.finalDay)) + " 2027 · buffer to " + esc(U.longDate(COURSE.PLAN.end)) + ". The calendar only measures pace — it never locks you out. To move the dates, ask Claude to re-plan.</p></div>" +
       "<label class='field'><span>Turtle unit size on the Trading Floor</span><select id='set-unit' data-chg='setUnit'><option value='0.005'" + (s.settings.unitRisk === 0.005 ? " selected" : "") + ">0.5% per N — course default (1% at the 2N stop)</option><option value='0.01'" + (s.settings.unitRisk === 0.01 ? " selected" : "") + ">1% per N — the original Turtle unit</option></select></label>" +
       "<label class='field'><span>Your pre-trade checklist (one item per line)</span><textarea id='set-check' rows='7' data-chg='setChecklist'>" + esc(s.settings.checklist.join("\n")) + "</textarea></label></div>" +
       "<p class='small'><b>Storage:</b> " + dbLine + "</p>" +
-      "<div class='row wrap'><button class='btn ghost' data-act='exportData'>Download my data (JSON)</button><button class='btn danger' data-act='resetAll'>Reset all progress…</button></div></section>";
+      "<div class='row wrap'><button class='btn ghost' data-act='exportData'>Download my data (JSON)</button><button class='btn ghost' data-act='restoreData'>Restore from a backup file…</button><button class='btn danger' data-act='resetAll'>Reset all progress…</button></div>" +
+      "<p class='small muted'>A backup downloaded from the claude.ai version restores here too.</p>" + restoreHTML() + "</section>";
+  }
+  function restoreHTML() {
+    const r = APP.ui.restore; if (!r) return "";
+    const c = r.counts, when = c.exported && !isNaN(new Date(c.exported)) ? new Date(c.exported).toLocaleString("en-ZA") : "an unknown date";
+    const rows = [["Lessons done", c.lessons], ["Apply sessions done", c.practicals], ["Reviews submitted", c.reviews], ["Gates attempted", c.exams], ["Trades", c.trades], ["Written answers", c.writing], ["Tutor conversations", c.threads]];
+    return "<div class='banner bad restore' id='restore-confirm'><p><b>Restore " + esc(r.name) + "?</b> It was saved on " + esc(when) + " and contains:</p>" +
+      "<div class='kv'>" + rows.map(function (x) { return "<div><span>" + esc(x[0]) + "</span><b>" + x[1] + "</b></div>"; }).join("") + "</div>" +
+      "<p>This <b>replaces everything on this device</b> — progress, journal, writing and tutor conversations. If you might want your current data back, download it first.</p>" +
+      "<div class='row wrap'><button class='btn danger' data-act='restoreConfirm'>Replace my data with this backup</button><button class='btn ghost' data-act='exportData'>Download my current data first</button><button class='btn ghost' data-act='restoreCancel'>Cancel</button></div></div>";
   }
   ACT.setName = function (el) { S().name = el.value.trim() || "Sfundo"; STORE.commit(false); };
   ACT.setUnit = function (el) { S().settings.unitRisk = parseFloat(el.value); STORE.commit(false); };
   ACT.setChecklist = function (el) { const lines = el.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean); S().settings.checklist = lines.length ? lines : STORE.DEFAULT_CHECKLIST.slice(); STORE.commit(false); U.toast("Checklist saved."); };
   ACT.exportData = async function () {
-    const data = JSON.stringify({ exported: new Date().toISOString(), state: APP.state, trades: APP.trades, writing: APP.writing }, null, 2);
-    if (APP.cap.downloads) { try { await APP.cap.downloads.save({ filename: "four-month-rebuild-" + U.today() + ".json", data: data }); return; } catch (e) { /* fall through */ } }
-    U.toast("Downloads aren't available here — your data is already saved in the Journal and cloud storage.", "bad");
+    const data = STORE.backupText();
+    if (APP.cap.downloads) { try { await APP.cap.downloads.save({ filename: "four-month-rebuild-" + U.today() + ".json", data: data }); U.toast("Backup downloaded."); return; } catch (e) { /* fall through */ } }
+    U.toast("This browser wouldn't save the file. Your data is still saved on this device.", "bad");
+  };
+  ACT.restoreData = async function () {
+    let f;
+    try { f = await PLATFORM.pickFile({ accept: ".json,application/json" }); } catch (e) { U.toast("That file couldn't be read.", "bad"); return; }
+    if (!f) return;
+    try { const r = STORE.checkBackup(f.text); APP.ui.restore = { name: f.name, data: r.data, counts: r.counts }; }
+    catch (e) { APP.ui.restore = null; U.toast(e.message, "bad"); render(false); return; }
+    render(false);
+    const box = U.$("#restore-confirm"); if (box) box.scrollIntoView({ block: "center" });
+  };
+  ACT.restoreCancel = function () { APP.ui.restore = null; render(false); };
+  ACT.restoreConfirm = function () {
+    const r = APP.ui.restore; if (!r) return;
+    try { STORE.restore(r.data); } catch (e) { U.toast(e.message, "bad"); return; }
+    APP.ui = {}; TUTOR.cur = null;
+    render(true); U.toast("Backup restored.");
   };
   ACT.resetAll = function () {
     if (!confirmTwice("reset")) return;
