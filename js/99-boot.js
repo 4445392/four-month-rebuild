@@ -30,7 +30,12 @@
   /* Capabilities come from PLATFORM (js/platform.js) under the same APP.cap names the
      claude.ai artifact used, so the rest of the app doesn't care where they come from. */
   async function boot() {
+    PLATFORM.storage.onError = function (e) {
+      U.toast("Couldn't save on this device" + (e && e.name === "QuotaExceededError" ? " — storage is full" : "") + ". Download a backup from Record → Settings.", "bad");
+    };
+    await PLATFORM.storage.ready();
     STORE.load();
+    storageStatus(true);
     APP.view = APP.parseHash();
     APP.cap.downloads = { save: function (o) { PLATFORM.download(o.filename, o.data, o.type); return Promise.resolve(); } };
     window.render(true);
@@ -47,6 +52,19 @@
     } else APP.cap.dbMode = "local";
     window.renderChrome();
   }
+  /* Ask the browser not to clear our data under storage pressure (Chrome decides quietly; Firefox asks). */
+  async function storageStatus(ask) {
+    const S = PLATFORM.storage;
+    try {
+      let p = await S.persisted();
+      if (p === false && ask) p = await S.persist();
+      APP.cap.persisted = p;
+      const est = await S.estimate();
+      APP.cap.usage = est ? est.usage : null;
+    } catch (e) { APP.cap.persisted = null; }
+    if (APP.view && APP.view.name === "record") window.softRender();
+  }
+  window.storageStatus = storageStatus;
   const d = U.$("#drawer");
   if (d) new MutationObserver(function () { window.renderChrome(); }).observe(d, { attributes: true, attributeFilter: ["hidden"] });
   boot();

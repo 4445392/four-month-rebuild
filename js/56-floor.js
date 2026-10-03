@@ -516,8 +516,8 @@
         const keep = 6000, k0 = Math.max(0, p.c.length - keep);
         const imp = { name: name, tf: tf, o: p.o.slice(k0), h: p.h.slice(k0), l: p.l.slice(k0), c: p.c.slice(k0), d: p.d.slice(k0) };
         if (imp.c.length < 200) throw new Error("Need at least 200 bars for a session.");
-        if (!writeLS(LS_IMP, imp)) throw new Error("This browser won't store that much data — try a shorter file.");
-        U.toast("Imported " + imp.c.length + " bars of " + name + ".");
+        if (!writeLS(LS_IMP, imp)) throw new Error("That file couldn't be stored.");
+        PLATFORM.storage.flush().then(function () { U.toast("Imported " + imp.c.length + " bars of " + name + "."); }, function () { U.toast("This browser wouldn't save that much data — it will be gone after a reload. Try a shorter file.", "bad"); });
         const mk = U.$("#fl-mk"); if (mk) mk.value = "IMP";
         refresh();
       } catch (e) { U.toast(e.message, "bad"); }

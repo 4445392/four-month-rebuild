@@ -543,6 +543,8 @@
         "<button class='btn primary' data-act='submitReview' data-w='" + cw + "'>" + (rv.done ? "Update my review" : "Submit my review") + "</button></div>" +
         (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
+      h += "<section class='panel'><div class='sec-head'><span class='code'>BACKUP</span><h2>Keep a copy</h2></div><p>Everything you've done lives only on this device. Download a backup each Sunday and keep it somewhere safe — Google Drive, or email it to yourself.</p>" +
+        "<p class='small muted'>" + esc(lastBackupText()) + "</p><div class='row'><button class='btn' data-act='weekBackup' data-w='" + cw + "'>Download this week's backup</button></div></section>";
       if (rday.h2 && rday.h2.type === "exam") { const ex = COURSE.exams[rday.h2.id]; h += "<section class='panel gate'><div class='sec-head'><span class='code'>HOUR 2 · GATE</span><h2>" + esc(ex.title) + "</h2></div><p>" + esc(ex.intro) + "</p><a class='btn primary' href='#/exam/" + ex.id + "'>Go to the gate</a></section>"; }
       return h + "</div>";
     }
@@ -899,7 +901,10 @@
   }
   function settingsHTML() {
     const s = S();
-    const dbLine = APP.cap.dbMode === "synced" ? "Saved on this device and synced." : APP.cap.dbMode === "connecting" ? "Connecting…" : "Saved on this device only, in this browser" + (APP.cap.dbError ? " (" + esc(APP.cap.dbError) + ")" : "") + ". Clearing the browser's data would erase it, so download a backup now and then.";
+    const p = APP.cap.persisted, used = APP.cap.usage ? " Using " + (APP.cap.usage / 1048576).toFixed(1) + " MB." : "";
+    const dbLine = (APP.cap.dbMode === "synced" ? "Saved on this device and synced." : APP.cap.dbMode === "connecting" ? "Connecting…" : "Saved on this device only, in this browser" + (APP.cap.dbError ? " (" + esc(APP.cap.dbError) + ")" : "") + ". Clearing the browser's data would erase it, so download a backup now and then.") + used +
+      "</p><p class='small'><b>Protected storage:</b> " + (p === true ? "on — the browser won't clear your data to free up space." : p === false ? "off — the browser may clear your data if the device runs low on space. Installing the app usually turns this on. <button class='btn xs ghost' data-act='askPersist'>Ask again</button>" : "this browser doesn't say.") +
+      "</p><p class='small'><b>" + esc(lastBackupText()) + "</b>";
     return "<section class='panel'><div class='sec-head'><span class='code'>SETTINGS</span><h2>Settings and data</h2></div><div class='form'>" +
       "<label class='field'><span>What the tutor calls you</span><input id='set-name' type='text' value='" + esc(s.name) + "' data-chg='setName'></label>" +
       "<div class='field'><span>Your plan</span><p class='small'>Orientation " + esc(U.longDate(COURSE.PLAN.start)) + " 2026 · Week 1 " + esc(U.longDate(COURSE.PLAN.week1)) + " · Final " + esc(U.longDate(COURSE.PLAN.finalDay)) + " 2027 · buffer to " + esc(U.longDate(COURSE.PLAN.end)) + ". The calendar only measures pace — it never locks you out. To move the dates, ask Claude to re-plan.</p></div>" +
@@ -921,10 +926,22 @@
   ACT.setName = function (el) { S().name = el.value.trim() || "Sfundo"; STORE.commit(false); };
   ACT.setUnit = function (el) { S().settings.unitRisk = parseFloat(el.value); STORE.commit(false); };
   ACT.setChecklist = function (el) { const lines = el.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean); S().settings.checklist = lines.length ? lines : STORE.DEFAULT_CHECKLIST.slice(); STORE.commit(false); U.toast("Checklist saved."); };
-  ACT.exportData = async function () {
+  async function saveBackup(filename) {
     const data = STORE.backupText();
-    if (APP.cap.downloads) { try { await APP.cap.downloads.save({ filename: "four-month-rebuild-" + U.today() + ".json", data: data }); U.toast("Backup downloaded."); return; } catch (e) { /* fall through */ } }
+    if (APP.cap.downloads) { try { await APP.cap.downloads.save({ filename: filename, data: data }); STORE.markBackup(); U.toast("Backup downloaded."); softRender(); return; } catch (e) { /* fall through */ } }
     U.toast("This browser wouldn't save the file. Your data is still saved on this device.", "bad");
+  }
+  function lastBackupText() {
+    const t = STORE.meta().lastBackup; if (!t) return "Last backup: never.";
+    const iso = U.iso(new Date(t)), n = U.daysBetween(iso, U.today());
+    return "Last backup: " + U.niceDate(iso) + " (" + (n <= 0 ? "today" : n === 1 ? "yesterday" : n + " days ago") + ")" + (n > 7 ? " — time for a new one." : ".");
+  }
+  ACT.exportData = function () { return saveBackup("four-month-rebuild-" + U.today() + ".json"); };
+  ACT.weekBackup = function (el) { return saveBackup("four-month-rebuild-week-" + el.dataset.w + "-" + U.today() + ".json"); };
+  ACT.askPersist = async function () {
+    const r = await PLATFORM.storage.persist();
+    U.toast(r ? "Protected storage is on." : "The browser said no for now. Installing the app usually helps; keep downloading backups.", r ? "" : "bad");
+    window.storageStatus(false);
   };
   ACT.restoreData = async function () {
     let f;
@@ -936,9 +953,9 @@
     const box = U.$("#restore-confirm"); if (box) box.scrollIntoView({ block: "center" });
   };
   ACT.restoreCancel = function () { APP.ui.restore = null; render(false); };
-  ACT.restoreConfirm = function () {
+  ACT.restoreConfirm = async function () {
     const r = APP.ui.restore; if (!r) return;
-    try { STORE.restore(r.data); } catch (e) { U.toast(e.message, "bad"); return; }
+    try { await STORE.restore(r.data); } catch (e) { U.toast(e.message, "bad"); return; }
     APP.ui = {}; TUTOR.cur = null;
     render(true); U.toast("Backup restored.");
   };

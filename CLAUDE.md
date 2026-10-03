@@ -54,7 +54,9 @@ Outside `js/`: `sw.js` (precache + cache-first), `manifest.webmanifest`, `icons/
 - **Progress** is one ordered sequence, `P.items()`, built from `COURSE.PLAN`; "next" is the first unfinished item. Never key progress by date — the calendar only measures pace (`P.pace()`).
 
 ## Data (all on the device)
-**localStorage keys:** `rebuild.v3.state`, `.trades`, `.writing`, `.threads`, `.floor`, `.import`
+**Storage:** IndexedDB database `four-month-rebuild`, object store `kv`, through `PLATFORM.storage` (`js/platform.js`). Boot awaits `storage.ready()`, which loads every key into memory; after that `get()` is synchronous and `set()` writes through at once (`flush()` resolves when it's on disk). The first run moves any `rebuild.*` localStorage keys across once (marker `rebuild.meta.migrated`) and removes them. If IndexedDB is unavailable it falls back to localStorage.
+
+**Keys:** `rebuild.v3.state`, `.trades`, `.writing`, `.threads`, `.floor` (Floor session), `.import` (CSV import, up to 6,000 bars), `.meta` (device-only: `lastBackup`). Boot also asks for persistent storage (`navigator.storage.persist()`); Settings shows the result, usage and the last backup date.
 
 **state (v4):**
 ```
@@ -86,7 +88,7 @@ Nothing calls `window.claude` any more. `99-boot.js` fills the old `APP.cap.*` n
 - `APP.cap.downloads.save({filename, data})` → `PLATFORM.download()`.
 - `APP.cap.sample` ← `PLATFORM.ai` (null → `TUTOR.available()` is false; buttons hide and `TUTOR.noKeyText` explains that a key is needed). **Phase 4** sets `PLATFORM.ai` to a sampler that follows the contract below.
 - `APP.cap.db`/`uid` ← `PLATFORM.sync` (`{db, uid}`, null). `STORE.pushNow`, `saveDoc`, `deleteDoc`, `initDb` and `syncCollection` stay dormant while it is null.
-- All saving goes through `PLATFORM.storage` (core and Floor). **Phase 3** swaps its insides for IndexedDB.
+- All saving goes through `PLATFORM.storage` (core and Floor) — IndexedDB since Phase 3.
 - Record → Settings: "Download my data" writes `{exported, app, state, trades, writing, threads}`. "Restore from a backup file" runs `STORE.checkBackup()`, shows counts, and replaces data only after confirmation. It accepts the claude.ai export (no `threads`).
 - Fonts are self-hosted in `/fonts` (Latin subsets, OFL licences alongside).
 

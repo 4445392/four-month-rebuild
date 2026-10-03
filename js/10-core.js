@@ -124,7 +124,7 @@
   };
 
   /* ---------------- store ---------------- */
-  const LS = { state: "rebuild.v3.state", trades: "rebuild.v3.trades", writing: "rebuild.v3.writing", threads: "rebuild.v3.threads", legacy: "rebuild.progress.v1" };
+  const LS = { state: "rebuild.v3.state", trades: "rebuild.v3.trades", writing: "rebuild.v3.writing", threads: "rebuild.v3.threads", meta: "rebuild.v3.meta", legacy: "rebuild.progress.v1" };
   const DEFAULT_CHECKLIST = [
     "Pair is on my market list and inside my correlation cap",
     "Entry condition is present exactly as written",
@@ -211,14 +211,17 @@
       };
       return { data: data, counts: counts };
     },
-    /* Replace everything on this device with a checked backup. */
-    restore: function (data) {
+    /* Replace everything on this device with a checked backup. Resolves once it is on disk. */
+    restore: async function (data) {
       APP.state = normalise(U.clone(data.state));
       APP.trades = U.clone(data.trades || {}); APP.writing = U.clone(data.writing || {}); APP.threads = U.clone(data.threads || {});
       const ok = [writeLS(LS.state, APP.state), writeLS(LS.trades, APP.trades), writeLS(LS.writing, APP.writing), writeLS(LS.threads, APP.threads)].every(Boolean);
-      if (!ok) throw new Error("This browser wouldn't save all of it (storage full or blocked).");
+      try { if (!ok) throw 0; await PLATFORM.storage.flush(); } catch (e) { throw new Error("This browser wouldn't save all of it (storage full or blocked)."); }
       STORE.schedulePush();
     },
+    /* device-only bookkeeping (not part of backups): when the last backup was downloaded */
+    meta: function () { return readLS(LS.meta, {}) || {}; },
+    markBackup: function () { const m = STORE.meta(); m.lastBackup = Date.now(); writeLS(LS.meta, m); },
     saveMap: function (name) { writeLS(LS[name], APP[name]); },
     commit: function (activity) {
       APP.state.updatedAt = Date.now();
