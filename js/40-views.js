@@ -543,7 +543,7 @@
         "<div class='row wrap'>" + (TUTOR.available() ? "<button class='btn' data-act='preReview' data-w='" + cw + "'>Pre-review with the tutor</button>" : TUTOR.keyButton()) +
         "<button class='btn primary' data-act='submitReview' data-w='" + cw + "'>" + (rv.done ? "Update my review" : "Submit my review") + "</button></div>" +
         (rv.done ? "<div class='banner good'>Submitted " + esc(new Date(rv.done).toLocaleString("en-ZA")) + ". Copy your Sunday message below and paste it into Claude.</div>" : "") + "</section>";
-      h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
+      h += "<section class='panel'><div class='sec-head'><span class='code'>FOR CLAUDE</span><h2>Your Sunday message</h2></div><textarea id='rv-out' class='report' rows='12' readonly aria-label='Your Sunday message, ready to copy'>" + esc(reportText(cw)) + "</textarea><div class='row'><button class='btn ghost' data-act='copyReport'>Copy</button></div></section>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>BACKUP</span><h2>Keep a copy</h2></div><p>Everything you've done lives only on this device. Download a backup each Sunday and keep it somewhere safe — Google Drive, or email it to yourself.</p>" +
         "<p class='small muted'>" + esc(lastBackupText()) + "</p><div class='row'><button class='btn' data-act='weekBackup' data-w='" + cw + "'>Download this week's backup</button></div></section>";
       if (rday.h2 && rday.h2.type === "exam") { const ex = COURSE.exams[rday.h2.id]; h += "<section class='panel gate'><div class='sec-head'><span class='code'>HOUR 2 · GATE</span><h2>" + esc(ex.title) + "</h2></div><p>" + esc(ex.intro) + "</p><a class='btn primary' href='#/exam/" + ex.id + "'>Go to the gate</a></section>"; }
@@ -865,7 +865,7 @@
       let h = "<div class='page'><header class='pagehead'><div class='eyebrow'>Academic record</div><h1>Your Record</h1><p class='lede'>Standing, transcript, the Almanac of everything you've measured, your consistency, and your settings.</p></header>";
       h += "<section class='panel'><div class='sec-head'><span class='code'>STANDING</span><h2>" + esc(rank.name) + "</h2></div><div class='ranks'>" + COURSE.RANKS.map(function (r) { return "<div class='rk" + (r.key === rank.key ? " on" : "") + "'>" + esc(r.name) + "</div>"; }).join("") + "</div>" +
         "<p class='muted small'>Trading Floor allocation at this standing: " + U.money(P.simAccount()) + " (simulated). In this programme allocation follows adherence, not profit.</p></section>";
-      h += "<section class='panel'><div class='sec-head'><span class='code'>TRANSCRIPT</span><h2>Modules</h2></div><div class='tablewrap'><table class='tbl'><thead><tr><th>Code</th><th>Module</th><th>Credits</th><th>Lessons</th><th>Gate</th><th>Status</th></tr></thead><tbody>";
+      h += "<section class='panel'><div class='sec-head'><span class='code'>TRANSCRIPT</span><h2>Modules</h2></div><div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Code</th><th>Module</th><th>Credits</th><th>Lessons</th><th>Gate</th><th>Status</th></tr></thead><tbody>";
       COURSE.MODULES.forEach(function (m) {
         const ls = P.moduleLessons(m.key), d = ls.filter(function (id) { return s.lessons[id] && s.lessons[id].done; }).length;
         const e = m.gate ? s.exams[m.gate] || {} : null;
@@ -885,7 +885,7 @@
     const rows = [];
     COURSE.weeks.forEach(function (w) { const pn = (S().practicals[w.n] || {}).num || {}; w.P.num.forEach(function (f) { if (pn[f.k] !== undefined && pn[f.k] !== "") rows.push([w.n, w.t, f.l, pn[f.k]]); }); });
     if (!rows.length) return "<p class='muted'>Nothing yet. Every unit ends with a number — the first arrives in Unit 1.</p>";
-    return "<div class='tablewrap'><table class='tbl'><thead><tr><th>Unit</th><th>Practical</th><th>Measure</th><th>Your value</th></tr></thead><tbody>" + rows.map(function (r) { return "<tr><td class='num'>" + r[0] + "</td><td>" + esc(r[1]) + "</td><td>" + esc(r[2]) + "</td><td class='mono'>" + esc(r[3]) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    return "<div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Unit</th><th>Practical</th><th>Measure</th><th>Your value</th></tr></thead><tbody>" + rows.map(function (r) { return "<tr><td class='num'>" + r[0] + "</td><td>" + esc(r[1]) + "</td><td>" + esc(r[2]) + "</td><td class='mono'>" + esc(r[3]) + "</td></tr>"; }).join("") + "</tbody></table></div>";
   }
   function gridHTML() {
     const pl = COURSE.PLAN, maxW = pl.days[pl.days.length - 1].cw;
@@ -913,6 +913,7 @@
       "<label class='field'><span>Turtle unit size on the Trading Floor</span><select id='set-unit' data-chg='setUnit'><option value='0.005'" + (s.settings.unitRisk === 0.005 ? " selected" : "") + ">0.5% per N — course default (1% at the 2N stop)</option><option value='0.01'" + (s.settings.unitRisk === 0.01 ? " selected" : "") + ">1% per N — the original Turtle unit</option></select></label>" +
       "<label class='field'><span>Your pre-trade checklist (one item per line)</span><textarea id='set-check' rows='7' data-chg='setChecklist'>" + esc(s.settings.checklist.join("\n")) + "</textarea></label></div>" +
       "<p class='small'><b>Storage:</b> " + dbLine + "</p>" + PWA.settingsHTML() +
+      "<div class='field'><span id='theme-l'>Appearance</span><div class='row wrap' role='group' aria-labelledby='theme-l'>" + [["system", "Follow the device"], ["light", "Light"], ["dark", "Dark"]].map(function (o) { const on = PLATFORM.theme.get() === o[0]; return "<button class='btn sm" + (on ? " primary" : " ghost") + "' data-act='setTheme' data-v='" + o[0] + "' aria-pressed='" + on + "'>" + o[1] + "</button>"; }).join("") + "</div></div>" +
       "<div class='row wrap'><button class='btn ghost' data-act='exportData'>Download my data (JSON)</button><button class='btn ghost' data-act='restoreData'>Restore from a backup file…</button><button class='btn danger' data-act='resetAll'>Reset all progress…</button></div>" +
       "<p class='small muted'>A backup downloaded from the claude.ai version restores here too.</p>" + restoreHTML() + "</section>";
   }
@@ -925,6 +926,7 @@
       "<p>This <b>replaces everything on this device</b> — progress, journal, writing and tutor conversations. If you might want your current data back, download it first.</p>" +
       "<div class='row wrap'><button class='btn danger' data-act='restoreConfirm'>Replace my data with this backup</button><button class='btn ghost' data-act='exportData'>Download my current data first</button><button class='btn ghost' data-act='restoreCancel'>Cancel</button></div></div>";
   }
+  ACT.setTheme = function (el) { PLATFORM.theme.set(el.dataset.v); render(false); };
   ACT.setName = function (el) { S().name = el.value.trim() || "Sfundo"; STORE.commit(false); };
   ACT.setUnit = function (el) { S().settings.unitRisk = parseFloat(el.value); STORE.commit(false); };
   ACT.setChecklist = function (el) { const lines = el.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean); S().settings.checklist = lines.length ? lines : STORE.DEFAULT_CHECKLIST.slice(); STORE.commit(false); U.toast("Checklist saved."); };

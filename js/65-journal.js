@@ -131,7 +131,7 @@
     h += "<section class='panel'><div class='row wrap'><a class='btn primary' href='#/journal/add' data-act='jNew'>Log a trade</a><span class='muted small'>" + (st.n < 20 ? "Fewer than 20 trades: treat every number here as a rumour." : st.n < 100 ? "Under 100 trades: a win rate here is still about ±10 points either way." : "") + "</span></div>";
     if (!list.length) h += "<p class='muted'>No trades in this view yet.</p>";
     else {
-      h += "<div class='tablewrap'><table class='tbl trades'><thead><tr><th>Date</th><th>Source</th><th>Pair</th><th>TF</th><th>Setup</th><th>Dir</th><th>R</th><th>Rules</th><th>Grade</th><th></th></tr></thead><tbody>";
+      h += "<div class='tablewrap' tabindex='0'><table class='tbl trades'><thead><tr><th>Date</th><th>Source</th><th>Pair</th><th>TF</th><th>Setup</th><th>Dir</th><th>R</th><th>Rules</th><th>Grade</th><th></th></tr></thead><tbody>";
       list.slice().reverse().slice(0, 200).forEach(function (t) {
         h += "<tr><td class='mono'>" + esc(t.date || "") + "</td><td class='small'>" + esc(SRC[t.src] || t.src) + (t.set ? " · " + esc(t.set) : "") + "</td><td>" + esc(t.pair || "") + "</td><td>" + esc(t.tf || "") + "</td><td class='small'>" + esc(t.setup || "") + "</td><td>" + esc(t.dir || "") + "</td>" +
           "<td class='num " + (t.R >= 0 ? "okt" : "badt") + "'>" + U.fmtR(t.R) + "</td><td>" + esc(t.rules || "·") + "</td><td>" + esc(t.grade || "·") + "</td><td class='acts'><button class='btn xs ghost' data-act='jEdit' data-id='" + esc(t.id) + "'>Edit</button><button class='btn xs ghost' data-act='jDel' data-id='" + esc(t.id) + "'>Delete</button></td></tr>";
@@ -178,7 +178,7 @@
     const seg = J.segments(list, JV.seg);
     if (!seg.length) return h + "<p class='muted'>No trades in this view yet.</p></section>";
     h += SVGC.bars(seg.slice(0, 12).map(function (r) { return { label: r.key.length > 10 ? r.key.slice(0, 9) + "…" : r.key, value: r.E, n: r.n, cls: r.n < 20 ? "bn" : (r.E >= 0 ? "bu" : "bd") }; }), { w: 560, h: 220, fmt: function (v) { return v.toFixed(2) + "R"; }, label: "Expectancy by " + DIMS[JV.seg], caption: "Expectancy by " + DIMS[JV.seg].toLowerCase() + ". Grey bars have fewer than 20 trades — hypotheses, not findings." });
-    h += "<div class='tablewrap'><table class='tbl'><thead><tr><th>" + esc(DIMS[JV.seg]) + "</th><th>n</th><th>Win rate</th><th>Avg win</th><th>Avg loss</th><th>Expectancy</th><th>Total</th></tr></thead><tbody>" +
+    h += "<div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>" + esc(DIMS[JV.seg]) + "</th><th>n</th><th>Win rate</th><th>Avg win</th><th>Avg loss</th><th>Expectancy</th><th>Total</th></tr></thead><tbody>" +
       seg.map(function (r) { return "<tr class='" + (r.n < 20 ? "thin" : "") + "'><td>" + esc(r.key) + "</td><td class='num'>" + r.n + "</td><td class='num'>" + U.pct(r.win) + "</td><td class='num'>" + r.aw.toFixed(2) + "R</td><td class='num'>" + r.al.toFixed(2) + "R</td><td class='num " + (r.E >= 0 ? "okt" : "badt") + "'>" + U.fmtR(r.E) + "</td><td class='num'>" + U.fmtR(r.tot, 1) + "</td></tr>"; }).join("") + "</tbody></table></div>";
     return h + "<p class='small muted'>Watched vs Unwatched is the Unit 20 experiment. Regime only exists for Floor trades on synthetic markets.</p></section>";
   }

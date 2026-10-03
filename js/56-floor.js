@@ -401,7 +401,7 @@
       else h += "<p class='callout small'>The rules lost money here. Same rules, different market — market selection is part of the system.</p>";
     }
     if (FL.autoAll) {
-      h += "<div class='tablewrap'><table class='tbl'><thead><tr><th>Market</th><th>S1</th><th>S1 DD</th><th>S2</th>" + (FL.revealAll ? "<th>DNA</th>" : "") + "</tr></thead><tbody>" +
+      h += "<div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Market</th><th>S1</th><th>S1 DD</th><th>S2</th>" + (FL.revealAll ? "<th>DNA</th>" : "") + "</tr></thead><tbody>" +
         FL.autoAll.map(function (r) { return "<tr><td class='mono'>" + esc(r.code) + "</td><td class='num " + (r.s1.expectancy >= 0 ? "okt" : "badt") + "'>" + U.fmtR(r.s1.expectancy) + "</td><td class='num'>" + r.s1.maxDD.toFixed(0) + "R</td><td class='num " + (r.s2.expectancy >= 0 ? "okt" : "badt") + "'>" + U.fmtR(r.s2.expectancy) + "</td>" + (FL.revealAll ? "<td class='small'>" + esc(r.dna) + "</td>" : "") + "</tr>"; }).join("") +
         "</tbody></table></div>" + (FL.revealAll ? "" : "<button class='btn ghost' data-act='flRevealAll'>Reveal all six DNAs</button>") +
         "<p class='small muted'>S1/S2 = expectancy per trade; DD = max drawdown. Identical rules, six different results. Which DNA suits a breakout system — and which one would you never trade it on?</p>";

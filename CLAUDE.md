@@ -113,6 +113,14 @@ sample.limits() → Promise<{tools: boolean}>
 - Top-level `cache_control: {type: "ephemeral"}` caches the long system prompt. Usage (incl. `usage.iterations` after a fallback) is added up per month and model in `rebuild.v3.ai`, with a cost estimate from the price table in the file — update prices there if they change.
 - Check model ids, headers and prices against current Anthropic docs before changing any of this.
 
+## Speed and accessibility (Phase 7.3 and 7.4)
+- **Speed — measured, and lazy-loading lessons was not worth it.** With the CPU slowed 6× (a slow phone), compiling all three lesson files (`21/22/23-course-*.js`, ~250 KB, ~80 KB gzipped) takes ~20 ms, and blocking them entirely made no measurable difference to start-up. Start-up time goes on opening IndexedDB (~280 ms at 6× on a first visit) and the first render (~60 ms); after the first visit the service worker serves every file from cache. Re-measure before splitting the course files; splitting them would mean separating lesson metadata (titles, ids — used by the Plan, Today and Course pages) from lesson bodies.
+- **Accessibility is tested** (`tests/e2e/a11y.spec.mjs`): axe-core WCAG 2.2 AA on 15 pages, light and dark, laptop and phone width, plus no sideways scrolling at 375 px. Keep it green:
+  - Don't fade text with `opacity` (locked items use a dashed border instead). `--ink-soft` is `#4F5F70` light / `#91A0AD` dark: the lightest greys that pass 4.5:1 on every surface.
+  - Links and buttons are at least 24 × 24 px. Scrollable boxes (`.tablewrap`, wide diagrams) get `tabindex='0'`. Every field has a label or `aria-label`.
+  - Navigation moves focus to `#main`; a "Skip to content" button comes first in the tab order.
+- **Theme:** Settings → Appearance (device / light / dark) sets `data-theme` on `<html>` through `PLATFORM.theme`. The choice is kept in localStorage (`fmr-theme`, deliberately not `rebuild.*`) so the inline script in `index.html` can apply it before the first paint.
+
 ## Rules
 - **Offline-first:** after Phase 1 there are no runtime CDNs (fonts are self-hosted). Everything ships in the repo.
 - **No secrets in git.** The Anthropic API key is typed in by the user and stored only on the device.

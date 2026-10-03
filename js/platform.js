@@ -140,5 +140,15 @@
     });
   }
 
-  window.PLATFORM = { storage: storage, download: download, pickFile: pickFile, ai: null, sync: null };
+  /* Light / dark / follow the system. A per-device preference kept in localStorage (not "rebuild.*",
+     so it never moves into IndexedDB) because index.html applies it before the first paint. */
+  const theme = {
+    get: function () { try { const t = localStorage.getItem("fmr-theme"); return t === "light" || t === "dark" ? t : "system"; } catch (e) { return "system"; } },
+    set: function (t) {
+      try { if (t === "light" || t === "dark") localStorage.setItem("fmr-theme", t); else localStorage.removeItem("fmr-theme"); } catch (e) { /* storage blocked: applies until reload */ }
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
+    }
+  };
+
+  window.PLATFORM = { storage: storage, download: download, pickFile: pickFile, theme: theme, ai: null, sync: null };
 })();

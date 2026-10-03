@@ -196,7 +196,7 @@
     h += SVGC.line([{ values: r.bands.p50, cls: "ser-acc", label: "Median" }, { values: r.bands.p5, cls: "ser-soft", label: "Unlucky 5%", dot: false }, { values: r.bands.p95, cls: "ser-soft2", label: "Lucky 5%", dot: false }],
       { w: 460, h: 220, fmt: function (v) { return v.toFixed(0) + "%"; }, unit: "%", band: { lo: r.bands.p25, hi: r.bands.p75, cls: "bandw" }, xfmt: function (t) { return String(Math.round(t * r.stride)); }, label: "Account change across simulated futures", caption: "Account change by trade number: median, middle 50% (shaded), and the lucky and unlucky 5%." });
     const rows = [0.5, 1, 2, 5].map(function (rk) { const x = runMC(m.w / 100, m.aw, m.al, rk / 100, m.n, 1200, m.dd / 100, 99); return "<tr" + (rk === m.risk ? " class='hl'" : "") + "><td class='num'>" + rk + "%</td><td class='num'>" + (100 * x.medDD).toFixed(0) + "%</td><td class='num'>" + (100 * x.p95DD).toFixed(0) + "%</td><td class='num'>" + (100 * x.pHit).toFixed(1) + "%</td><td class='num'>" + sgn((x.medFinal - 1) * 100) + "</td></tr>"; }).join("");
-    h += "<div class='tablewrap'><table class='tbl'><thead><tr><th>Risk</th><th>Typical worst DD</th><th>1-in-20 DD</th><th>Chance of " + m.dd + "% DD</th><th>Median result</th></tr></thead><tbody>" + rows + "</tbody></table></div>";
+    h += "<div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Risk</th><th>Typical worst DD</th><th>1-in-20 DD</th><th>Chance of " + m.dd + "% DD</th><th>Median result</th></tr></thead><tbody>" + rows + "</tbody></table></div>";
     return h + "<p class='small muted'>Same edge, same trades — only the size changes. Your backtest is one of these futures; plan for the unlucky ones.</p>";
   };
 

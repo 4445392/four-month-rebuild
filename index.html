@@ -14,6 +14,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>try { var t = localStorage.getItem("fmr-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script><!-- before the CSS: no flash of the wrong theme -->
   <link rel="stylesheet" href="css/app.css">
   <!-- Scripts are classic (non-module) scripts that share globals. ORDER MATTERS — see CLAUDE.md. -->
   <script defer src="js/platform.js"></script>
@@ -39,6 +40,7 @@
   <script defer src="js/99-boot.js"></script>
 </head>
 <body>
+<button class="skip" data-act="skipMain">Skip to content</button>
 <div class="app">
   <aside class="rail" aria-label="Programme navigation">
     <a class="brand" href="#/today"><span class="mark">FMR</span><span><b>The Four-Month Rebuild</b><small>1 Dec → 28 Mar · two hours a day</small></span></a>
@@ -56,7 +58,7 @@
     <div class="modes" id="t-modes"></div>
     <div class="ctxchip" id="t-ctx"></div>
     <div class="msgs" id="t-msgs" aria-live="polite"></div>
-    <div class="composer"><textarea id="t-in" rows="2" placeholder="Ask anything… (Enter sends, Shift+Enter for a new line)"></textarea><button class="btn primary" id="t-send" data-act="tutorSend">Send</button><button class="btn" id="t-stop" data-act="tutorStop" hidden>Stop</button></div>
+    <div class="composer"><textarea id="t-in" rows="2" aria-label="Your question for the tutor" placeholder="Ask anything… (Enter sends, Shift+Enter for a new line)"></textarea><button class="btn primary" id="t-send" data-act="tutorSend">Send</button><button class="btn" id="t-stop" data-act="tutorStop" hidden>Stop</button></div>
     <div class="dnote">Never gives trade signals</div>
   </aside>
   <div class="toasts" id="toasts" aria-live="polite"></div>

@@ -539,11 +539,15 @@
     try { window.scrollTo(0, y); } catch (e) { /* ignore */ }
   };
   document.addEventListener("focusout", function () { if (APP.ui.pendingSoft) setTimeout(function () { if (APP.ui.pendingSoft) window.softRender(); }, 400); });
-  window.addEventListener("hashchange", function () { APP.view = parseHash(); window.render(true); });
+  window.addEventListener("hashchange", function () {
+    APP.view = parseHash(); window.render(true);
+    const m = U.$("#main"); if (m) m.focus({ preventScroll: true }); // keyboard and screen-reader users start at the new page
+  });
   APP.parseHash = parseHash;
 
   /* ---------------- actions ---------------- */
   const ACT = window.ACT = {};
+  ACT.skipMain = function () { const m = U.$("#main"); if (m) m.focus(); };
   const run = function (f, el, e) { try { const r = f(el, e); if (r && r.catch) r.catch(function (err) { console.error(err); U.toast("That didn't work: " + (err && err.message || err), "bad"); }); } catch (err) { console.error(err); U.toast("That didn't work: " + err.message, "bad"); } };
   document.addEventListener("click", function (e) {
     const el = e.target.closest("[data-act]");

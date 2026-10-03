@@ -332,7 +332,7 @@
     h += "<label class='field'><span>Model</span><select id='ai-model' data-chg='aiModel'>" + AI.MODELS.map(function (m) { return "<option value='" + m.id + "'" + (m.id === cur ? " selected" : "") + ">" + esc(m.name + " — " + m.note + " ($" + m.price[0] + " in / $" + m.price[1] + " out per million tokens)") + "</option>"; }).join("") + "</select></label></div>";
     h += "<p class='small'><b>This month:</b> ";
     if (!use.rows.length) h += "no tutor use yet.</p>";
-    else h += "about $" + use.cost.toFixed(2) + " (an estimate from the API's token counts — the Anthropic Console has the exact bill).</p><div class='tablewrap'><table class='tbl'><thead><tr><th>Model</th><th>Requests</th><th>Input</th><th>Cached</th><th>Output</th><th>About</th></tr></thead><tbody>" +
+    else h += "about $" + use.cost.toFixed(2) + " (an estimate from the API's token counts — the Anthropic Console has the exact bill).</p><div class='tablewrap' tabindex='0'><table class='tbl'><thead><tr><th>Model</th><th>Requests</th><th>Input</th><th>Cached</th><th>Output</th><th>About</th></tr></thead><tbody>" +
       use.rows.map(function (r) { return "<tr><td>" + esc(r.name) + "</td><td class='num'>" + r.req + "</td><td class='num'>" + fmtN(r.in + r.cw) + "</td><td class='num'>" + fmtN(r.cr) + "</td><td class='num'>" + fmtN(r.out) + "</td><td class='num'>$" + r.cost.toFixed(2) + "</td></tr>"; }).join("") + "</tbody></table></div>";
     return h + "<p class='small muted'>Your key is stored only in this browser on this device. It is never put in backups and is only ever sent to api.anthropic.com. If the tutor declines a request, it is re-run once on Anthropic's recommended fallback model.</p></section>";
   };

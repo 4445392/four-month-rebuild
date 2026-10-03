@@ -23,7 +23,7 @@
   };
   const DEFS = '<defs><marker id="dgA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk"/></marker></defs>';
   const fig = function (w, h, inner, caption, cls) {
-    return '<figure class="dg' + (cls ? " " + cls : "") + '"><svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="' + esc(caption) + '">' + DEFS + inner + "</svg><figcaption>" + esc(caption) + "</figcaption></figure>";
+    return '<figure class="dg' + (cls ? " " + cls : "") + '"' + (/\bwide\b/.test(cls || "") ? ' tabindex="0"' : "") + '><svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="' + esc(caption) + '">' + DEFS + inner + "</svg><figcaption>" + esc(caption) + "</figcaption></figure>";
   };
   const D = window.DIAG = {};
 
