@@ -905,7 +905,7 @@
       "<div class='field'><span>Your plan</span><p class='small'>Orientation " + esc(U.longDate(COURSE.PLAN.start)) + " 2026 · Week 1 " + esc(U.longDate(COURSE.PLAN.week1)) + " · Final " + esc(U.longDate(COURSE.PLAN.finalDay)) + " 2027 · buffer to " + esc(U.longDate(COURSE.PLAN.end)) + ". The calendar only measures pace — it never locks you out. To move the dates, ask Claude to re-plan.</p></div>" +
       "<label class='field'><span>Turtle unit size on the Trading Floor</span><select id='set-unit' data-chg='setUnit'><option value='0.005'" + (s.settings.unitRisk === 0.005 ? " selected" : "") + ">0.5% per N — course default (1% at the 2N stop)</option><option value='0.01'" + (s.settings.unitRisk === 0.01 ? " selected" : "") + ">1% per N — the original Turtle unit</option></select></label>" +
       "<label class='field'><span>Your pre-trade checklist (one item per line)</span><textarea id='set-check' rows='7' data-chg='setChecklist'>" + esc(s.settings.checklist.join("\n")) + "</textarea></label></div>" +
-      "<p class='small'><b>Storage:</b> " + dbLine + "</p>" +
+      "<p class='small'><b>Storage:</b> " + dbLine + "</p>" + PWA.settingsHTML() +
       "<div class='row wrap'><button class='btn ghost' data-act='exportData'>Download my data (JSON)</button><button class='btn ghost' data-act='restoreData'>Restore from a backup file…</button><button class='btn danger' data-act='resetAll'>Reset all progress…</button></div>" +
       "<p class='small muted'>A backup downloaded from the claude.ai version restores here too.</p>" + restoreHTML() + "</section>";
   }
